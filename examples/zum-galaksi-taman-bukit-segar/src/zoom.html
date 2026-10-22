@@ -1,0 +1,350 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Zum Galaksi ke Taman Bukit Segar</title>
+<style>
+@font-face{font-family:'Plus Jakarta Sans';font-weight:600;src:url(node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:800;src:url(node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-800-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Mono';font-weight:400;src:url(node_modules/@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Mono';font-weight:500;src:url(node_modules/@fontsource/dm-mono/files/dm-mono-latin-500-normal.woff2) format('woff2')}
+html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}
+</style>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+'use strict';
+const W = 1920, H = 1080, CX = W / 2, CY = H / 2;
+const TLAT = 3.0926, TLON = 101.7496;           // Taman Bukit Segar, anggaran (dari nama jalan pada peta Esri)
+const KL = [3.1390, 101.6869], CHERAS = [3.1090, 101.7320];
+const TDUR = 24, ZEND = 18.0, ACC = '#38bdf8';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const TAU = Math.PI * 2;
+const cl = x => Math.max(0, Math.min(1, x));
+const seg = (x, a, b) => cl((x - a) / (b - a));
+const io = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const out = x => 1 - Math.pow(1 - x, 4);
+const sm = x => x * x * (3 - 2 * x);
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ---------- zoom Z(t): satu parameter menggerakkan seluruh filem (PCHIP monoton) ---------- */
+const ZK = [[3.2, 0], [5.4, 3.2], [8.4, 4.2], [10.2, 6.0], [TDUR, ZEND]];
+const ZD = (() => {
+  const n = ZK.length, h = [], d = [], m = [];
+  for (let i = 0; i < n - 1; i++) { h.push(ZK[i + 1][0] - ZK[i][0]); d.push((ZK[i + 1][1] - ZK[i][1]) / h[i]); }
+  m[0] = 0; m[n - 1] = 0.12;
+  for (let i = 1; i < n - 1; i++) m[i] = (d[i - 1] * d[i] <= 0) ? 0 : 2 * d[i - 1] * d[i] / (d[i - 1] + d[i]);
+  return { h, m };
+})();
+function Zof(t) {
+  if (t <= ZK[0][0]) return 0;
+  if (t >= TDUR) return ZEND;
+  let i = 0; while (t > ZK[i + 1][0]) i++;
+  const h = ZD.h[i], s = (t - ZK[i][0]) / h, s2 = s * s, s3 = s2 * s;
+  return (2 * s3 - 3 * s2 + 1) * ZK[i][1] + (s3 - 2 * s2 + s) * h * ZD.m[i] + (-2 * s3 + 3 * s2) * ZK[i + 1][1] + (s3 - s2) * h * ZD.m[i + 1];
+}
+function tOfZ(z) { let a = 3.2, b = TDUR; for (let k = 0; k < 40; k++) { const m = (a + b) / 2; if (Zof(m) < z) a = m; else b = m; } return b; }
+
+/* ---------- label bagi setiap tahap ---------- */
+const LV = [
+  { key: 'GALAKSI', name: 'ALAM GALAKSI', sub: 'Bima Sakti · ilustrasi', crumb: 'BIMA SAKTI' },
+  { key: 'BUMI', name: 'BUMI', sub: 'Planet ketiga dari Matahari', z0: 2.6, crumb: 'BUMI' },
+  { key: 'ASIA', name: 'ASIA', sub: 'Benua terbesar di Bumi', z0: 3.9, crumb: 'ASIA' },
+  { key: 'MY', name: 'MALAYSIA', sub: 'Semenanjung dan Borneo', z0: 5.6, crumb: 'MALAYSIA' },
+  { key: 'KL', name: 'KUALA LUMPUR', sub: 'Ibu negara Malaysia', z0: 8.4, crumb: 'KUALA LUMPUR' },
+  { key: 'CHERAS', name: 'CHERAS', sub: 'Tenggara pusat bandar Kuala Lumpur', z0: 12.2, crumb: 'CHERAS' },
+  { key: 'TBS', name: 'TAMAN BUKIT SEGAR', sub: 'Kawasan perumahan, Cheras', z0: 15.2, crumb: 'TAMAN BUKIT SEGAR' },
+];
+LV[0].t0 = 0.45; LV[0].t1 = 3.1;
+for (let i = 1; i < LV.length; i++) LV[i].t0 = tOfZ(LV[i].z0);
+LV[0].end = LV[0].t1; for (let i = 1; i < LV.length; i++) LV[i].end = i < LV.length - 1 ? LV[i + 1].t0 : 99;
+LV[1].t0 = Math.max(LV[1].t0, 3.35);
+
+/* ---------- galaksi (ilustrasi prosedur, benih tetap) ---------- */
+const GS = 2048, gal = document.createElement('canvas'); gal.width = gal.height = GS;
+let SUN = { x: 0, y: 0 };
+(function makeGalaxy() {
+  const g = gal.getContext('2d'), R = mulberry32(20260930);
+  const gauss = () => Math.sqrt(-2 * Math.log(1 - R())) * Math.cos(TAU * R());
+  g.fillStyle = '#02030a'; g.fillRect(0, 0, GS, GS);
+  g.globalCompositeOperation = 'lighter';
+  const c = GS / 2, Rd = 0.43 * GS, a0 = 0.045 * GS, pitch = 4.6, rot = 0.55;
+  const arm = (r, k) => pitch * Math.log(Math.max(r, 1) / a0) + k * Math.PI + rot;
+  // kabus lengan (haze)
+  for (let i = 0; i < 2600; i++) {
+    const r = a0 + (-Math.log(1 - R() * 0.97)) * 0.2 * GS; if (r > Rd * 1.05) continue;
+    const k = R() < 0.7 ? (R() < .5 ? 0 : 2) : (R() < .5 ? 1 : 3);
+    const th = arm(r, k) + gauss() * (0.16 + 0.1 * r / Rd);
+    const x = c + r * Math.cos(th), y = c + r * Math.sin(th) * 0.92;
+    const rad = 26 + R() * 70, mix = cl(r / Rd);
+    const col = [190 - 80 * mix, 195 - 40 * mix, 255].map(Math.round);
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+    gr.addColorStop(0, `rgba(${col},0.045)`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+  }
+  // bintang
+  for (let i = 0; i < 120000; i++) {
+    let x, y, mix, a = 0.18 + R() * 0.6, rad = 0.5 + R() * 0.9;
+    const u = R();
+    if (u < 0.74) {
+      const r = a0 * 0.4 + (-Math.log(1 - R() * 0.995)) * 0.15 * GS; if (r > Rd) { i--; continue; }
+      const k = R() < 0.72 ? (R() < .5 ? 0 : 2) : (R() < .5 ? 1 : 3);
+      const th = arm(r, k) + gauss() * (0.1 + 0.28 * r / Rd);
+      x = c + r * Math.cos(th); y = c + r * Math.sin(th) * 0.92; mix = cl(r / Rd);
+    } else if (u < 0.94) {
+      const r = Math.abs(gauss()) * 0.07 * GS, th = R() * TAU; x = c + r * Math.cos(th); y = c + r * Math.sin(th) * 0.9; mix = 0; a *= 1.1;
+    } else {
+      const r = Math.abs(gauss()) * 0.3 * GS, th = R() * TAU; x = c + r * Math.cos(th); y = c + r * Math.sin(th) * 0.9; mix = 0.6; a *= 0.5;
+    }
+    const col = [255 - 90 * mix, 232 - 30 * mix, 190 + 65 * mix].map(Math.round);
+    g.fillStyle = `rgba(${col},${a.toFixed(3)})`; g.beginPath(); g.arc(x, y, rad, 0, TAU); g.fill();
+  }
+  // teras
+  const cg = g.createRadialGradient(c, c, 0, c, c, 0.2 * GS);
+  cg.addColorStop(0, 'rgba(255,226,170,0.85)'); cg.addColorStop(0.25, 'rgba(255,200,130,0.32)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = cg; g.fillRect(0, 0, GS, GS);
+  // lorong habuk
+  g.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < 900; i++) {
+    const r = a0 + R() * Rd * 0.9, k = R() < .5 ? 0 : 2, th = arm(r, k) - 0.18 + gauss() * 0.05;
+    const x = c + r * Math.cos(th), y = c + r * Math.sin(th) * 0.92, rad = 10 + R() * 28;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(2,3,10,0.06)'); gr.addColorStop(1, 'rgba(2,3,10,0)');
+    g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+  }
+  // Matahari: pada lengan Orion, kira-kira 0.55 jejari cakera
+  const rs = 0.55 * Rd, ths = arm(rs, 0) + 0.12;
+  SUN = { x: c + rs * Math.cos(ths), y: c + rs * Math.sin(ths) * 0.92 };
+})();
+
+/* ---------- medan bintang ---------- */
+const STARS = (() => { const R = mulberry32(77), a = []; for (let i = 0; i < 1700; i++) a.push({ x: R() * W, y: R() * H, s: 0.4 + R() * 1.3, b: 0.25 + R() * 0.75, f: 0.5 + R() * 2.5, p: R() * TAU }); return a; })();
+
+/* ---------- tekstur Bumi (lapisan z6 > z5 > z4) ---------- */
+let LAYERS = [];
+function loadImg(src) { return new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
+const TILES = new Map();
+window.loadAll = async function (tileList) {
+  const meta = await (await fetch('tex/meta.json')).json();
+  const L = [];
+  for (const m of meta) {
+    const im = await loadImg(`tex/${m.name}.jpg`);
+    const c = document.createElement('canvas'); c.width = m.w; c.height = m.h;
+    const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+    L.push({ ...m, d: x.getImageData(0, 0, m.w, m.h).data, n: 2 ** m.z });
+  }
+  LAYERS = [L[2], L[1], L[0]];
+  if (tileList) await Promise.all(tileList.map(async k => { const [z, x, y] = k.split('/'); const im = await loadImg(`tiles/${z}/${y}/${x}.jpg`); if (im) TILES.set(k, im); }));
+  await Promise.all([document.fonts.load('800 80px "Plus Jakarta Sans"'), document.fonts.load('600 30px "Plus Jakarta Sans"'), document.fonts.load('400 24px "DM Mono"'), document.fonts.load('500 24px "DM Mono"')]);
+  return TILES.size;
+};
+
+/* ---------- glob (raycast orthografik, sampel mercator) ---------- */
+const gOff = document.createElement('canvas'), gOctx = gOff.getContext('2d');
+function sampleLayer(Ly, u, v, out4) {
+  const fx = (u * Ly.n - Ly.x0) * 256 - 0.5, fy = (v * Ly.n - Ly.y0) * 256 - 0.5;
+  if (fx < 0 || fy < 0 || fx >= Ly.w - 1 || fy >= Ly.h - 1) return false;
+  const x0 = fx | 0, y0 = fy | 0, tx = fx - x0, ty = fy - y0, d = Ly.d, w = Ly.w;
+  const i00 = (y0 * w + x0) * 4, i10 = i00 + 4, i01 = i00 + w * 4, i11 = i01 + 4;
+  const a = (1 - tx) * (1 - ty), b = tx * (1 - ty), c = (1 - tx) * ty, e = tx * ty;
+  out4[0] = d[i00] * a + d[i10] * b + d[i01] * c + d[i11] * e;
+  out4[1] = d[i00 + 1] * a + d[i10 + 1] * b + d[i01 + 1] * c + d[i11 + 1] * e;
+  out4[2] = d[i00 + 2] * a + d[i10 + 2] * b + d[i01 + 2] * c + d[i11 + 2] * e;
+  return true;
+}
+function globeState(Z) {
+  const e = io(seg(Z, 0, 4.6));
+  return { lat0: (TLAT + 24 * (1 - e)) * Math.PI / 180, lon0: (TLON + 105 * (1 - e)) * Math.PI / 180 };
+}
+function drawGlobe(Z, alpha) {
+  const r = 256 * 2 ** Z / TAU, { lat0, lon0 } = globeState(Z);
+  const x0 = Math.max(0, Math.floor(CX - r * 1.1)), x1 = Math.min(W, Math.ceil(CX + r * 1.1));
+  const y0 = Math.max(0, Math.floor(CY - r * 1.1)), y1 = Math.min(H, Math.ceil(CY + r * 1.1));
+  const w = x1 - x0, h = y1 - y0; if (w <= 0 || h <= 0) return;
+  if (gOff.width !== w || gOff.height !== h) { gOff.width = w; gOff.height = h; }
+  const img = gOctx.createImageData(w, h), D = img.data;
+  const sp = Math.sin(lat0), cp = Math.cos(lat0), px = [0, 0, 0];
+  const shadeAmt = 1 - seg(Z, 3.8, 5.2), rimAmt = 1 - seg(Z, 3.5, 4.8);
+  const Lx = -0.45, Ly = 0.35, Lz = 0.82, ln = Math.hypot(Lx, Ly, Lz);
+  const lx = Lx / ln, ly = Ly / ln, lz = Lz / ln, ir = 1 / r;
+  for (let j = 0; j < h; j++) {
+    const yy = (CY - (j + y0 + 0.5)) * ir;
+    for (let i = 0; i < w; i++) {
+      const xx = (i + x0 + 0.5 - CX) * ir, rho2 = xx * xx + yy * yy, o = (j * w + i) * 4;
+      if (rho2 > 1.1664) continue;
+      if (rho2 <= 1) {
+        const cosc = Math.sqrt(1 - rho2), s = cosc * sp + yy * cp;
+        const lon = lon0 + Math.atan2(xx, cp * cosc - yy * sp);
+        let u = lon / TAU + 0.5; u -= Math.floor(u);
+        const sc = Math.max(-0.9999, Math.min(0.9999, s)), v = (1 - 0.5 * Math.log((1 + sc) / (1 - sc)) / Math.PI) / 2;
+        let ok = false;
+        for (let k = 0; k < 3 && !ok; k++) ok = sampleLayer(LAYERS[k], u, Math.max(0, Math.min(0.9999, v)), px);
+        if (!ok) { px[0] = 225; px[1] = 235; px[2] = 245; }
+        const ndl = xx * lx + yy * ly + cosc * lz;
+        let sh = 1 + (-0.78 + 0.78 * cl(0.18 + ndl * 1.1)) * shadeAmt;
+        const rim = Math.pow(Math.sqrt(rho2), 5) * 0.55 * rimAmt;
+        D[o] = px[0] * sh * (1 - rim) + 110 * rim; D[o + 1] = px[1] * sh * (1 - rim) + 170 * rim; D[o + 2] = px[2] * sh * (1 - rim) + 255 * rim; D[o + 3] = 255;
+      } else {
+        const rho = Math.sqrt(rho2), a = Math.pow(1 - (rho - 1) / 0.08, 2.2) * 0.75 * rimAmt;
+        D[o] = 90; D[o + 1] = 160; D[o + 2] = 255; D[o + 3] = a * 255;
+      }
+    }
+  }
+  gOctx.putImageData(img, 0, 0);
+  ctx.globalAlpha = alpha; ctx.drawImage(gOff, x0, y0); ctx.globalAlpha = 1;
+}
+
+/* ---------- peta jubin ---------- */
+let COLLECT = null;
+function lon2x(lon) { return (lon + 180) / 360; }
+function lat2y(lat) { const s = Math.sin(lat * Math.PI / 180); return (1 - 0.5 * Math.log((1 + s) / (1 - s)) / Math.PI) / 2; }
+function proj(lat, lon, Z) { const ws = 256 * 2 ** Z; return [CX + (lon2x(lon) - lon2x(TLON)) * ws, CY + (lat2y(lat) - lat2y(TLAT)) * ws]; }
+function drawMapLevel(Z, L, alpha) {
+  const ts = 256 * 2 ** (Z - L), n = 2 ** L;
+  const cx = lon2x(TLON) * n, cy = lat2y(TLAT) * n;
+  const xa = Math.floor(cx - CX / ts), xb = Math.floor(cx + CX / ts), ya = Math.floor(cy - CY / ts), yb = Math.floor(cy + CY / ts);
+  if (!COLLECT) ctx.globalAlpha = alpha;
+  for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) {
+    const k = `${L}/${((x % n) + n) % n}/${y}`;
+    if (COLLECT) { COLLECT.add(k); continue; }
+    const im = TILES.get(k); if (!im) continue;
+    ctx.drawImage(im, CX + (x - cx) * ts, CY + (y - cy) * ts, ts + 0.6, ts + 0.6);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawMap(Z) {
+  const Lc = Math.min(18, Math.ceil(Z - 1e-6)), f = Z - (Lc - 1);   // f dalam (0,1]
+  if (!COLLECT) { ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, W, H); }
+  if (Z > 18) { drawMapLevel(Z, 18, 1); return; }
+  drawMapLevel(Z, Lc - 1, 1);                                        // tahap bawah (diskalakan naik)
+  drawMapLevel(Z, Lc, sm(seg(f, 0.05, 0.6)));                        // tahap atas memudar masuk: tiada lonjakan warna/perincian
+}
+
+/* ---------- HUD ---------- */
+function mask(x, y, w, h, fn, p) { ctx.save(); ctx.beginPath(); ctx.rect(x, y - h, w, h + h * 0.35); ctx.clip(); ctx.translate(0, (1 - p) * h * 1.15); fn(); ctx.restore(); }
+function fmtDeg(v, pos, neg) { return Math.abs(v).toFixed(4) + '°' + (v >= 0 ? pos : neg); }
+function niceScale(mpp) {
+  const target = 190 * mpp; const p = Math.pow(10, Math.floor(Math.log10(target)));
+  let best = p; for (const m of [1, 2, 5, 10]) if (m * p <= target * 1.25) best = m * p;
+  return { m: best, px: best / mpp };
+}
+function hud(t, Z) {
+  // skrim
+  let g = ctx.createLinearGradient(0, H - 420, 0, H); g.addColorStop(0, 'rgba(2,6,14,0)'); g.addColorStop(1, 'rgba(2,6,14,0.78)');
+  ctx.fillStyle = g; ctx.fillRect(0, H - 420, W, 420);
+  g = ctx.createLinearGradient(0, 0, 0, 190); g.addColorStop(0, 'rgba(2,6,14,0.62)'); g.addColorStop(1, 'rgba(2,6,14,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 190);
+  // sudut
+  ctx.strokeStyle = 'rgba(56,189,248,0.75)'; ctx.lineWidth = 3; const m = 44, l = 70;
+  for (const [x, y, sx, sy] of [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]]) {
+    ctx.beginPath(); ctx.moveTo(x, y + sy * l); ctx.lineTo(x, y); ctx.lineTo(x + sx * l, y); ctx.stroke();
+  }
+  // atas kiri
+  ctx.font = '500 24px "DM Mono"'; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('ZUM DARI GALAKSI KE TAMAN BUKIT SEGAR', 76, 96);
+  ctx.fillStyle = ACC; ctx.fillRect(76, 112, 56, 4);
+  // atas kanan: koordinat
+  let lat, lon, tag;
+  if (t < 3.2) { lat = null; }
+  else if (Z < 5.5) { const s = globeState(Z); lat = s.lat0 * 180 / Math.PI; lon = s.lon0 * 180 / Math.PI; }
+  else { lat = TLAT; lon = TLON; }
+  ctx.textAlign = 'right';
+  if (lat !== null) {
+    ctx.font = '500 26px "DM Mono"'; ctx.fillStyle = '#fff';
+    ctx.fillText('LAT ' + fmtDeg(lat, 'U', 'S') + '   LON ' + fmtDeg(((lon + 180) % 360 + 360) % 360 - 180, 'T', 'B'), W - 76, 96);
+    ctx.font = '400 20px "DM Mono"'; ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText(Z >= 5.5 ? 'PUSAT PAPARAN · ZUM ' + Z.toFixed(1) : 'TITIK TENGAH PAPARAN', W - 76, 130);
+  } else {
+    ctx.font = '500 26px "DM Mono"'; ctx.fillStyle = ACC; ctx.fillText('ILUSTRASI · BUKAN IMEJ SEBENAR', W - 76, 96);
+  }
+  // tajuk besar
+  let idx = 0; for (let i = 0; i < LV.length; i++) if (t >= LV[i].t0) idx = i;
+  const lv = LV[idx], p = out(seg(t, lv.t0, lv.t0 + 0.7)), p2 = out(seg(t, lv.t0 + 0.15, lv.t0 + 0.85));
+  const fade = idx === 0 ? 1 - seg(t, 2.8, 3.1) : 1;
+  ctx.globalAlpha = fade; ctx.textAlign = 'left';
+  mask(76, H - 215, 1500, 96, () => { ctx.font = '800 92px "Plus Jakarta Sans"'; ctx.fillStyle = '#fff'; ctx.fillText(lv.name, 76, H - 215); }, p);
+  mask(76, H - 160, 1500, 36, () => { ctx.font = '600 32px "Plus Jakarta Sans"'; ctx.fillStyle = 'rgba(255,255,255,0.82)'; ctx.fillText(lv.sub, 76, H - 160); }, p2);
+  ctx.globalAlpha = 1;
+  // jejak roti (breadcrumb)
+  ctx.font = '500 22px "DM Mono"'; let bx = 76; const by = H - 84;
+  for (let i = 0; i < LV.length; i++) {
+    const on = i <= idx, cur = i === idx;
+    ctx.fillStyle = cur ? ACC : on ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.28)';
+    const label = LV[i].crumb; ctx.fillText(label, bx, by); bx += ctx.measureText(label).width;
+    if (i < LV.length - 1) { ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillText('  ›  ', bx, by); bx += ctx.measureText('  ›  ').width; }
+  }
+  // skala + kredit
+  ctx.textAlign = 'right';
+  if (Z >= 5.5) {
+    const mpp = 40075016.686 * Math.cos(TLAT * Math.PI / 180) / (256 * 2 ** Z), sc = niceScale(mpp);
+    const x1 = W - 76, x0 = x1 - sc.px, y = H - 130;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y - 10); ctx.lineTo(x0, y); ctx.lineTo(x1, y); ctx.lineTo(x1, y - 10); ctx.stroke();
+    ctx.font = '500 22px "DM Mono"'; ctx.fillStyle = '#fff'; ctx.fillText(sc.m >= 1000 ? (sc.m / 1000) + ' km' : sc.m + ' m', x1, y - 18);
+  }
+  ctx.font = '400 18px "DM Mono"'; ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText(t < 3.3 ? 'Ilustrasi prosedur · bukan imej sebenar' : 'Imej: Esri, Maxar, Earthstar Geographics & komuniti pengguna GIS', W - 76, H - 62);
+  ctx.textAlign = 'left';
+}
+function pin(lat, lon, Z, name, z0, z1, color) {
+  const a = sm(seg(Z, z0, z0 + 0.5)) * (1 - sm(seg(Z, z1 - 0.5, z1))); if (a <= 0.01) return;
+  const [x, y] = proj(lat, lon, Z); if (x < -50 || x > W + 50 || y < -50 || y > H + 50) return;
+  ctx.globalAlpha = a; ctx.fillStyle = color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(x, y, 11, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.font = '800 34px "Plus Jakarta Sans"'; const tw = ctx.measureText(name).width;
+  ctx.fillStyle = 'rgba(8,14,28,0.82)'; ctx.beginPath(); ctx.roundRect(x + 24, y - 28, tw + 32, 52, 12); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(name, x + 40, y + 9); ctx.globalAlpha = 1;
+}
+
+/* ---------- galaksi ---------- */
+function drawGalaxy(t) {
+  const s0 = 0.82 * H / (0.9 * GS), s1 = 46, k = io(seg(t, 0.0, 3.3)), sc = s0 * Math.pow(s1 / s0, k);
+  const a = 1 - seg(t, 1.6, 2.8);
+  ctx.save(); ctx.translate(CX, CY); ctx.rotate(0.12 * Math.sin(t * 0.6) - 0.1 * k); ctx.scale(sc, sc);
+  // pusat pandangan beralih dari teras ke Matahari
+  const kp = sm(seg(t, 0, 2.2)), px = GS / 2 + (SUN.x - GS / 2) * kp, py = GS / 2 + (SUN.y - GS / 2) * kp;
+  ctx.translate(-px, -py); ctx.globalAlpha = a; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(gal, 0, 0); ctx.restore(); ctx.globalAlpha = 1;
+  // penanda Matahari
+  const ma = seg(t, 0.8, 1.4) * (1 - seg(t, 2.6, 3.1));
+  if (ma > 0) {
+    const ang = 0.12 * Math.sin(t * 0.6) - 0.1 * k, dx = (SUN.x - px) * sc, dy = (SUN.y - py) * sc;
+    const sx = CX + dx * Math.cos(ang) - dy * Math.sin(ang), sy = CY + dx * Math.sin(ang) + dy * Math.cos(ang);
+    ctx.globalAlpha = ma; ctx.strokeStyle = ACC; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sx, sy, 26 + 6 * Math.sin(t * 5), 0, TAU); ctx.stroke();
+    ctx.fillStyle = ACC; ctx.beginPath(); ctx.arc(sx, sy, 5, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(56,189,248,0.8)'; ctx.beginPath(); ctx.moveTo(sx + 26, sy - 20); ctx.lineTo(sx + 90, sy - 70); ctx.lineTo(sx + 260, sy - 70); ctx.stroke();
+    ctx.font = '500 26px "DM Mono"'; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText('SISTEM SURIA · ANDA DI SINI', sx + 94, sy - 80); ctx.globalAlpha = 1;
+  }
+}
+function drawStars(t, a) {
+  if (a <= 0) return;
+  for (const s of STARS) { const tw = 0.8 + 0.2 * Math.sin(t * s.f + s.p); ctx.globalAlpha = a * s.b * tw; ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.s, s.s); }
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- seek(t) ---------- */
+window.seek = function (t) {
+  const Z = Zof(t);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.fillStyle = '#02030a'; ctx.fillRect(0, 0, W, H);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  if (t < 3.4) drawGalaxy(t);
+  drawStars(t, seg(t, 1.0, 2.2) * (1 - seg(Z, 4.0, 4.8)));
+  if (Z >= 5.4) drawMap(Z);
+  if (t >= 3.0 && Z < 6.3) { const ea = seg(t, 3.0, 3.5), fa = Z >= 5.4 ? 1 - seg(Z, 5.4, 6.3) : 1; drawGlobe(Z, ea * fa); }
+  hud(t, Z);
+  if (Z >= 5.4) {
+    pin(KL[0], KL[1], Z, 'Kuala Lumpur', 8.2, 12.6, '#f59e0b');
+    pin(CHERAS[0], CHERAS[1], Z, 'Cheras', 11.6, 15.8, '#f59e0b');
+    // sasaran: cincin berdenyut + pin
+    const a = sm(seg(Z, 14.6, 15.6));
+    if (a > 0) {
+      const ph = (t * 0.9) % 1; ctx.globalAlpha = a * (1 - ph); ctx.strokeStyle = ACC; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(CX, CY, 22 + ph * 90, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = a; ctx.fillStyle = ACC; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(CX, CY, 13, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.font = '500 24px "DM Mono"'; ctx.textAlign = 'left';
+      const ct = fmtDeg(TLAT, 'U', 'S') + '  ' + fmtDeg(TLON, 'T', 'B') + '  (anggaran)', cw = ctx.measureText(ct).width;
+      ctx.fillStyle = 'rgba(8,14,28,0.82)'; ctx.beginPath(); ctx.roundRect(CX + 30, CY - 52, cw + 28, 44, 10); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.fillText(ct, CX + 44, CY - 22); ctx.globalAlpha = 1;
+    }
+  }
+};
+window.collect = function (frames, fps) {
+  COLLECT = new Set();
+  for (let f = 0; f < frames; f++) { const Z = Zof(f / fps); if (Z >= 5.4) drawMap(Z); }
+  const out = [...COLLECT]; COLLECT = null; return out;
+};
+window.LV = LV;
+</script>
