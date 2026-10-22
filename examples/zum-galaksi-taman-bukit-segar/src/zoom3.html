@@ -1,0 +1,489 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Zum Galaksi ke Alam Barzakh</title>
+<style>
+@font-face{font-family:'Plus Jakarta Sans';font-weight:600;src:url(node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:800;src:url(node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-800-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Mono';font-weight:400;src:url(node_modules/@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Mono';font-weight:500;src:url(node_modules/@fontsource/dm-mono/files/dm-mono-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'Amiri';font-weight:400;src:url(node_modules/@fontsource/amiri/files/amiri-arabic-400-normal.woff2) format('woff2')}
+html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}
+</style>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+'use strict';
+const PT = new URLSearchParams(location.search).has('p');   // potret 9:16 (WhatsApp Status)
+const W = PT ? 1080 : 1920, H = PT ? 1920 : 1080, CX = W / 2, CY = H / 2;
+const TLAT = 3.0913, TLON = 101.7538;           // Taman Bukit Segar: kedudukan label peta Esri
+const CEM = [3.1083778, 101.7536773];            // Tanah Perkuburan Islam Taman Permai, Cheras: koordinat diberi pengguna
+const KL = [3.1390, 101.6869], CHERAS = [3.1090, 101.7320];
+const TDUR = 24, ZEND = 18.0, ACC = '#38bdf8', TEND = 51.4;
+const cv = document.getElementById('c'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+const TAU = Math.PI * 2;
+const cl = x => Math.max(0, Math.min(1, x));
+const seg = (x, a, b) => cl((x - a) / (b - a));
+const io = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const out = x => 1 - Math.pow(1 - x, 4);
+const sm = x => x * x * (3 - 2 * x);
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ---------- zoom Z(t): satu parameter menggerakkan seluruh filem (PCHIP monoton) ---------- */
+const ZK = [[3.2, 0], [5.4, 3.2], [8.4, 4.2], [10.2, 6.0], [TDUR, ZEND]];
+const ZD = (() => {
+  const n = ZK.length, h = [], d = [], m = [];
+  for (let i = 0; i < n - 1; i++) { h.push(ZK[i + 1][0] - ZK[i][0]); d.push((ZK[i + 1][1] - ZK[i][1]) / h[i]); }
+  m[0] = 0; m[n - 1] = 0.12;
+  for (let i = 1; i < n - 1; i++) m[i] = (d[i - 1] * d[i] <= 0) ? 0 : 2 * d[i - 1] * d[i] / (d[i - 1] + d[i]);
+  return { h, m };
+})();
+function Zof(t) {
+  if (t <= ZK[0][0]) return 0;
+  if (t >= TDUR) return ZEND;
+  let i = 0; while (t > ZK[i + 1][0]) i++;
+  const h = ZD.h[i], s = (t - ZK[i][0]) / h, s2 = s * s, s3 = s2 * s;
+  return (2 * s3 - 3 * s2 + 1) * ZK[i][1] + (s3 - 2 * s2 + s) * h * ZD.m[i] + (-2 * s3 + 3 * s2) * ZK[i + 1][1] + (s3 - s2) * h * ZD.m[i + 1];
+}
+function tOfZ(z) { let a = 3.2, b = TDUR; for (let k = 0; k < 40; k++) { const m = (a + b) / 2; if (Zof(m) < z) a = m; else b = m; } return b; }
+
+/* ---------- label bagi setiap tahap ---------- */
+const LV = [
+  { key: 'GALAKSI', name: 'ALAM GALAKSI', sub: 'Bima Sakti · ilustrasi', crumb: 'BIMA SAKTI' },
+  { key: 'BUMI', name: 'BUMI', sub: 'Planet ketiga dari Matahari', z0: 2.6, crumb: 'BUMI' },
+  { key: 'ASIA', name: 'ASIA', sub: 'Benua terbesar di Bumi', z0: 3.9, crumb: 'ASIA' },
+  { key: 'MY', name: 'MALAYSIA', sub: 'Semenanjung dan Borneo', z0: 5.6, crumb: 'MALAYSIA' },
+  { key: 'KL', name: 'KUALA LUMPUR', sub: 'Ibu negara Malaysia', z0: 8.4, crumb: 'KUALA LUMPUR' },
+  { key: 'CHERAS', name: 'CHERAS', sub: 'Tenggara pusat bandar Kuala Lumpur', z0: 12.2, crumb: 'CHERAS' },
+  { key: 'TBS', name: 'TAMAN BUKIT SEGAR', sub: 'Kawasan perumahan, Cheras', z0: 15.2, crumb: 'TAMAN BUKIT SEGAR' },
+];
+LV.push({ key: 'TPK', name: 'TANAH PERKUBURAN ISLAM', sub: 'Taman Permai, Cheras', t0: 28.8, crumb: 'TANAH PERKUBURAN' },
+  { key: 'LAHAD', name: 'LIANG LAHAD', sub: 'Ilustrasi · jenazah dibaringkan di sisi kanan menghadap kiblat', t0: 35.4, crumb: 'LIANG LAHAD' },
+  { key: 'BARZAKH', name: 'ALAM BARZAKH', sub: 'Antara kematian dan hari kebangkitan', t0: 42.8, crumb: 'ALAM BARZAKH' });
+LV[0].t0 = 0.45; LV[0].t1 = 3.1;
+for (let i = 1; i < LV.length; i++) if (LV[i].z0 !== undefined) LV[i].t0 = tOfZ(LV[i].z0);
+LV[0].end = LV[0].t1; for (let i = 1; i < LV.length; i++) LV[i].end = i < LV.length - 1 ? LV[i + 1].t0 : 99;
+LV[1].t0 = Math.max(LV[1].t0, 3.35);
+
+/* ---------- galaksi (ilustrasi prosedur, benih tetap) ---------- */
+const GS = 2048, gal = document.createElement('canvas'); gal.width = gal.height = GS;
+let SUN = { x: 0, y: 0 };
+(function makeGalaxy() {
+  const g = gal.getContext('2d'), R = mulberry32(20260930);
+  const gauss = () => Math.sqrt(-2 * Math.log(1 - R())) * Math.cos(TAU * R());
+  g.fillStyle = '#02030a'; g.fillRect(0, 0, GS, GS);
+  g.globalCompositeOperation = 'lighter';
+  const c = GS / 2, Rd = 0.43 * GS, a0 = 0.045 * GS, pitch = 4.6, rot = 0.55;
+  const arm = (r, k) => pitch * Math.log(Math.max(r, 1) / a0) + k * Math.PI + rot;
+  // kabus lengan (haze)
+  for (let i = 0; i < 2600; i++) {
+    const r = a0 + (-Math.log(1 - R() * 0.97)) * 0.2 * GS; if (r > Rd * 1.05) continue;
+    const k = R() < 0.7 ? (R() < .5 ? 0 : 2) : (R() < .5 ? 1 : 3);
+    const th = arm(r, k) + gauss() * (0.16 + 0.1 * r / Rd);
+    const x = c + r * Math.cos(th), y = c + r * Math.sin(th) * 0.92;
+    const rad = 26 + R() * 70, mix = cl(r / Rd);
+    const col = [190 - 80 * mix, 195 - 40 * mix, 255].map(Math.round);
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+    gr.addColorStop(0, `rgba(${col},0.045)`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+  }
+  // bintang
+  for (let i = 0; i < 120000; i++) {
+    let x, y, mix, a = 0.18 + R() * 0.6, rad = 0.5 + R() * 0.9;
+    const u = R();
+    if (u < 0.74) {
+      const r = a0 * 0.4 + (-Math.log(1 - R() * 0.995)) * 0.15 * GS; if (r > Rd) { i--; continue; }
+      const k = R() < 0.72 ? (R() < .5 ? 0 : 2) : (R() < .5 ? 1 : 3);
+      const th = arm(r, k) + gauss() * (0.1 + 0.28 * r / Rd);
+      x = c + r * Math.cos(th); y = c + r * Math.sin(th) * 0.92; mix = cl(r / Rd);
+    } else if (u < 0.94) {
+      const r = Math.abs(gauss()) * 0.07 * GS, th = R() * TAU; x = c + r * Math.cos(th); y = c + r * Math.sin(th) * 0.9; mix = 0; a *= 1.1;
+    } else {
+      const r = Math.abs(gauss()) * 0.3 * GS, th = R() * TAU; x = c + r * Math.cos(th); y = c + r * Math.sin(th) * 0.9; mix = 0.6; a *= 0.5;
+    }
+    const col = [255 - 90 * mix, 232 - 30 * mix, 190 + 65 * mix].map(Math.round);
+    g.fillStyle = `rgba(${col},${a.toFixed(3)})`; g.beginPath(); g.arc(x, y, rad, 0, TAU); g.fill();
+  }
+  // teras
+  const cg = g.createRadialGradient(c, c, 0, c, c, 0.2 * GS);
+  cg.addColorStop(0, 'rgba(255,226,170,0.85)'); cg.addColorStop(0.25, 'rgba(255,200,130,0.32)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = cg; g.fillRect(0, 0, GS, GS);
+  // lorong habuk
+  g.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < 900; i++) {
+    const r = a0 + R() * Rd * 0.9, k = R() < .5 ? 0 : 2, th = arm(r, k) - 0.18 + gauss() * 0.05;
+    const x = c + r * Math.cos(th), y = c + r * Math.sin(th) * 0.92, rad = 10 + R() * 28;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(2,3,10,0.06)'); gr.addColorStop(1, 'rgba(2,3,10,0)');
+    g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+  }
+  // Matahari: pada lengan Orion, kira-kira 0.55 jejari cakera
+  const rs = 0.55 * Rd, ths = arm(rs, 0) + 0.12;
+  SUN = { x: c + rs * Math.cos(ths), y: c + rs * Math.sin(ths) * 0.92 };
+})();
+
+/* ---------- medan bintang ---------- */
+const STARS = (() => { const R = mulberry32(77), a = []; for (let i = 0; i < 1700; i++) a.push({ x: R() * W, y: R() * H, s: 0.4 + R() * 1.3, b: 0.25 + R() * 0.75, f: 0.5 + R() * 2.5, p: R() * TAU }); return a; })();
+
+/* ---------- tekstur Bumi (lapisan z6 > z5 > z4) ---------- */
+let LAYERS = [];
+function loadImg(src) { return new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
+const TILES = new Map();
+window.loadAll = async function (tileList) {
+  const meta = await (await fetch('tex/meta.json')).json();
+  const L = [];
+  for (const m of meta) {
+    const im = await loadImg(`tex/${m.name}.jpg`);
+    const c = document.createElement('canvas'); c.width = m.w; c.height = m.h;
+    const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+    L.push({ ...m, d: x.getImageData(0, 0, m.w, m.h).data, n: 2 ** m.z });
+  }
+  LAYERS = [L[2], L[1], L[0]];
+  if (tileList) await Promise.all(tileList.map(async k => { const [z, x, y] = k.split('/'); const im = await loadImg(`tiles/${z}/${y}/${x}.jpg`); if (im) TILES.set(k, im); }));
+  await Promise.all([document.fonts.load('800 80px "Plus Jakarta Sans"'), document.fonts.load('600 30px "Plus Jakarta Sans"'), document.fonts.load('400 24px "DM Mono"'), document.fonts.load('500 24px "DM Mono"')]);
+  return TILES.size;
+};
+
+/* ---------- glob (raycast orthografik, sampel mercator) ---------- */
+const gOff = document.createElement('canvas'), gOctx = gOff.getContext('2d');
+function sampleLayer(Ly, u, v, out4) {
+  const fx = (u * Ly.n - Ly.x0) * 256 - 0.5, fy = (v * Ly.n - Ly.y0) * 256 - 0.5;
+  if (fx < 0 || fy < 0 || fx >= Ly.w - 1 || fy >= Ly.h - 1) return false;
+  const x0 = fx | 0, y0 = fy | 0, tx = fx - x0, ty = fy - y0, d = Ly.d, w = Ly.w;
+  const i00 = (y0 * w + x0) * 4, i10 = i00 + 4, i01 = i00 + w * 4, i11 = i01 + 4;
+  const a = (1 - tx) * (1 - ty), b = tx * (1 - ty), c = (1 - tx) * ty, e = tx * ty;
+  out4[0] = d[i00] * a + d[i10] * b + d[i01] * c + d[i11] * e;
+  out4[1] = d[i00 + 1] * a + d[i10 + 1] * b + d[i01 + 1] * c + d[i11 + 1] * e;
+  out4[2] = d[i00 + 2] * a + d[i10 + 2] * b + d[i01 + 2] * c + d[i11 + 2] * e;
+  return true;
+}
+function globeState(Z) {
+  const e = io(seg(Z, 0, 4.6));
+  return { lat0: (TLAT + 24 * (1 - e)) * Math.PI / 180, lon0: (TLON + 105 * (1 - e)) * Math.PI / 180 };
+}
+function drawGlobe(Z, alpha) {
+  const r = 256 * 2 ** Z / TAU, { lat0, lon0 } = globeState(Z);
+  const x0 = Math.max(0, Math.floor(CX - r * 1.1)), x1 = Math.min(W, Math.ceil(CX + r * 1.1));
+  const y0 = Math.max(0, Math.floor(CY - r * 1.1)), y1 = Math.min(H, Math.ceil(CY + r * 1.1));
+  const w = x1 - x0, h = y1 - y0; if (w <= 0 || h <= 0) return;
+  if (gOff.width !== w || gOff.height !== h) { gOff.width = w; gOff.height = h; }
+  const img = gOctx.createImageData(w, h), D = img.data;
+  const sp = Math.sin(lat0), cp = Math.cos(lat0), px = [0, 0, 0];
+  const shadeAmt = 1 - seg(Z, 3.8, 5.2), rimAmt = 1 - seg(Z, 3.5, 4.8);
+  const Lx = -0.45, Ly = 0.35, Lz = 0.82, ln = Math.hypot(Lx, Ly, Lz);
+  const lx = Lx / ln, ly = Ly / ln, lz = Lz / ln, ir = 1 / r;
+  for (let j = 0; j < h; j++) {
+    const yy = (CY - (j + y0 + 0.5)) * ir;
+    for (let i = 0; i < w; i++) {
+      const xx = (i + x0 + 0.5 - CX) * ir, rho2 = xx * xx + yy * yy, o = (j * w + i) * 4;
+      if (rho2 > 1.1664) continue;
+      if (rho2 <= 1) {
+        const cosc = Math.sqrt(1 - rho2), s = cosc * sp + yy * cp;
+        const lon = lon0 + Math.atan2(xx, cp * cosc - yy * sp);
+        let u = lon / TAU + 0.5; u -= Math.floor(u);
+        const sc = Math.max(-0.9999, Math.min(0.9999, s)), v = (1 - 0.5 * Math.log((1 + sc) / (1 - sc)) / Math.PI) / 2;
+        let ok = false;
+        for (let k = 0; k < 3 && !ok; k++) ok = sampleLayer(LAYERS[k], u, Math.max(0, Math.min(0.9999, v)), px);
+        if (!ok) { px[0] = 225; px[1] = 235; px[2] = 245; }
+        const ndl = xx * lx + yy * ly + cosc * lz;
+        let sh = 1 + (-0.78 + 0.78 * cl(0.18 + ndl * 1.1)) * shadeAmt;
+        const rim = Math.pow(Math.sqrt(rho2), 5) * 0.55 * rimAmt;
+        D[o] = px[0] * sh * (1 - rim) + 110 * rim; D[o + 1] = px[1] * sh * (1 - rim) + 170 * rim; D[o + 2] = px[2] * sh * (1 - rim) + 255 * rim; D[o + 3] = 255;
+      } else {
+        const rho = Math.sqrt(rho2), a = Math.pow(1 - (rho - 1) / 0.08, 2.2) * 0.75 * rimAmt;
+        D[o] = 90; D[o + 1] = 160; D[o + 2] = 255; D[o + 3] = a * 255;
+      }
+    }
+  }
+  gOctx.putImageData(img, 0, 0);
+  ctx.globalAlpha = alpha; ctx.drawImage(gOff, x0, y0); ctx.globalAlpha = 1;
+}
+
+/* ---------- peta jubin ---------- */
+let COLLECT = null;
+function lon2x(lon) { return (lon + 180) / 360; }
+function lat2y(lat) { const s = Math.sin(lat * Math.PI / 180); return (1 - 0.5 * Math.log((1 + s) / (1 - s)) / Math.PI) / 2; }
+function y2lat(y) { return Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180 / Math.PI; }
+let CAM = { Z: 0, lat: TLAT, lon: TLON };
+function cam(t) {
+  if (t <= TDUR) return { Z: Zof(t), lat: TLAT, lon: TLON };
+  const p = io(seg(t, 24, 31)), pp = io(seg(t, 24.8, 30.4));
+  const Z = 18 + p - 2.9 * Math.sin(Math.PI * p) + 0.05 * Math.max(0, t - 31);
+  const y = lat2y(TLAT) + (lat2y(CEM[0]) - lat2y(TLAT)) * pp;
+  return { Z, lat: y2lat(y), lon: TLON + (CEM[1] - TLON) * pp };
+}
+function proj(lat, lon, Z) { const ws = 256 * 2 ** Z; return [CX + (lon2x(lon) - lon2x(CAM.lon)) * ws, CY + (lat2y(lat) - lat2y(CAM.lat)) * ws]; }
+function drawMapLevel(Z, L, alpha) {
+  const ts = 256 * 2 ** (Z - L), n = 2 ** L;
+  const cx = lon2x(CAM.lon) * n, cy = lat2y(CAM.lat) * n;
+  const xa = Math.floor(cx - CX / ts), xb = Math.floor(cx + CX / ts), ya = Math.floor(cy - CY / ts), yb = Math.floor(cy + CY / ts);
+  if (!COLLECT) ctx.globalAlpha = alpha;
+  for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) {
+    const k = `${L}/${((x % n) + n) % n}/${y}`;
+    if (COLLECT) { COLLECT.add(k); continue; }
+    const im = TILES.get(k); if (!im) continue;
+    ctx.drawImage(im, CX + (x - cx) * ts, CY + (y - cy) * ts, ts + 0.6, ts + 0.6);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawMap(Z) {
+  const Lc = Math.min(19, Math.ceil(Z - 1e-6)), f = Z - (Lc - 1);   // f dalam (0,1]
+  if (!COLLECT) { ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, W, H); }
+  if (Z > 19) { drawMapLevel(Z, 19, 1); return; }
+  drawMapLevel(Z, Lc - 1, 1);                                        // tahap bawah (diskalakan naik)
+  drawMapLevel(Z, Lc, sm(seg(f, 0.05, 0.6)));                        // tahap atas memudar masuk: tiada lonjakan warna/perincian
+}
+
+/* ---------- HUD ---------- */
+function mask(x, y, w, h, fn, p) { ctx.save(); ctx.beginPath(); ctx.rect(x, y - h, w, h + h * 0.35); ctx.clip(); ctx.translate(0, (1 - p) * h * 1.15); fn(); ctx.restore(); }
+function fmtDeg(v, pos, neg) { return Math.abs(v).toFixed(4) + '°' + (v >= 0 ? pos : neg); }
+function niceScale(mpp) {
+  const target = 190 * mpp; const p = Math.pow(10, Math.floor(Math.log10(target)));
+  let best = p; for (const m of [1, 2, 5, 10]) if (m * p <= target * 1.25) best = m * p;
+  return { m: best, px: best / mpp };
+}
+function hud(t, Z) {
+  const sb = PT ? 520 : 420, st = PT ? 280 : 190;
+  let g = ctx.createLinearGradient(0, H - sb, 0, H); g.addColorStop(0, 'rgba(2,6,14,0)'); g.addColorStop(1, 'rgba(2,6,14,0.78)');
+  ctx.fillStyle = g; ctx.fillRect(0, H - sb, W, sb);
+  g = ctx.createLinearGradient(0, 0, 0, st); g.addColorStop(0, 'rgba(2,6,14,0.62)'); g.addColorStop(1, 'rgba(2,6,14,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, st);
+  ctx.strokeStyle = 'rgba(56,189,248,0.75)'; ctx.lineWidth = 3; const m = 44, l = 70;
+  for (const [x, y, sx, sy] of [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]]) {
+    ctx.beginPath(); ctx.moveTo(x, y + sy * l); ctx.lineTo(x, y); ctx.lineTo(x + sx * l, y); ctx.stroke();
+  }
+  ctx.font = '500 24px "DM Mono"'; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('ZUM DARI GALAKSI KE ALAM BARZAKH', 76, 96);
+  ctx.fillStyle = ACC; ctx.fillRect(76, 112, 56, 4);
+  let lat, lon;
+  if (t < 3.2 || t >= 34.6) { lat = null; }
+  else if (Z < 5.5) { const s = globeState(Z); lat = s.lat0 * 180 / Math.PI; lon = s.lon0 * 180 / Math.PI; }
+  else { lat = CAM.lat; lon = CAM.lon; }
+  const xr = PT ? 76 : W - 76, y1 = PT ? 176 : 96, y2 = PT ? 210 : 130; ctx.textAlign = PT ? 'left' : 'right';
+  if (lat !== null) {
+    ctx.font = '500 26px "DM Mono"'; ctx.fillStyle = '#fff';
+    ctx.fillText('LAT ' + fmtDeg(lat, 'U', 'S') + '   LON ' + fmtDeg(((lon + 180) % 360 + 360) % 360 - 180, 'T', 'B'), xr, y1);
+    ctx.font = '400 20px "DM Mono"'; ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText(Z >= 5.5 ? 'PUSAT PAPARAN · ZUM ' + Z.toFixed(1) : 'TITIK TENGAH PAPARAN', xr, y2);
+  } else {
+    ctx.font = '500 26px "DM Mono"'; ctx.fillStyle = ACC; ctx.fillText('ILUSTRASI · BUKAN IMEJ SEBENAR', xr, y1);
+  }
+  let idx = 0; for (let i = 0; i < LV.length; i++) if (t >= LV[i].t0) idx = i;
+  const lv = LV[idx], p = out(seg(t, lv.t0, lv.t0 + 0.7)), p2 = out(seg(t, lv.t0 + 0.15, lv.t0 + 0.85));
+  const fade = idx === 0 ? 1 - seg(t, 2.8, 3.1) : (idx === LV.length - 1 ? 1 - seg(t, 48.0, 48.6) : 1);
+  const ty = H - (PT ? 270 : 215), sy = H - (PT ? 215 : 160);
+  ctx.globalAlpha = fade; ctx.textAlign = 'left';
+  let fs = 92; ctx.font = `800 ${fs}px "Plus Jakarta Sans"`; while (ctx.measureText(lv.name).width > W - 152 && fs > 40) { fs -= 2; ctx.font = `800 ${fs}px "Plus Jakarta Sans"`; }
+  mask(76, ty, W - 100, fs * 1.05, () => { ctx.font = `800 ${fs}px "Plus Jakarta Sans"`; ctx.fillStyle = '#fff'; ctx.fillText(lv.name, 76, ty); }, p);
+  ctx.font = '600 32px "Plus Jakarta Sans"'; const sl = wrapText(ctx, lv.sub, W - 152);
+  sl.forEach((ln, i) => mask(76, sy + i * 42, W - 100, 36, () => { ctx.font = '600 32px "Plus Jakarta Sans"'; ctx.fillStyle = 'rgba(255,255,255,0.82)'; ctx.fillText(ln, 76, sy + i * 42); }, p2));
+  ctx.globalAlpha = 1;
+  if (PT) {
+    const n = LV.length;
+    for (let i = 0; i < n; i++) { ctx.fillStyle = i === idx ? ACC : i < idx ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.28)'; ctx.beginPath(); ctx.arc(80 + i * 34, H - 108, i === idx ? 9 : 6, 0, TAU); ctx.fill(); }
+    ctx.font = '500 20px "DM Mono"'; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillText(`${idx + 1} / ${n}`, 80 + n * 34 + 6, H - 101);
+  } else {
+    ctx.font = '500 18px "DM Mono"'; let bx = 76; const by = H - 84;
+    for (let i = 0; i < LV.length; i++) {
+      const on = i <= idx, cur = i === idx;
+      ctx.fillStyle = cur ? ACC : on ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.28)';
+      const label = LV[i].crumb; ctx.fillText(label, bx, by); bx += ctx.measureText(label).width;
+      if (i < LV.length - 1) { ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillText('  ›  ', bx, by); bx += ctx.measureText('  ›  ').width; }
+    }
+  }
+  ctx.textAlign = 'right';
+  if (Z >= 5.5 && t < 34.6) {
+    const mpp = 40075016.686 * Math.cos(CAM.lat * Math.PI / 180) / (256 * 2 ** Z), sc = niceScale(mpp);
+    const x1 = W - 76, x0 = x1 - sc.px, y = PT ? 232 : H - 130;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y - 10); ctx.lineTo(x0, y); ctx.lineTo(x1, y); ctx.lineTo(x1, y - 10); ctx.stroke();
+    ctx.font = '500 22px "DM Mono"'; ctx.fillStyle = '#fff'; ctx.fillText(sc.m >= 1000 ? (sc.m / 1000) + ' km' : sc.m + ' m', x1, y - 18);
+  }
+  ctx.font = `400 ${PT ? 16 : 18}px "DM Mono"`; ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText((t < 3.3 || t >= 34.6) ? 'Ilustrasi prosedur · bukan imej sebenar' : 'Imej: Esri, Maxar, Earthstar Geographics & komuniti pengguna GIS', W - 76, H - 62);
+  ctx.textAlign = 'left';
+}
+function pin(lat, lon, Z, name, z0, z1, color) {
+  const a = sm(seg(Z, z0, z0 + 0.5)) * (1 - sm(seg(Z, z1 - 0.5, z1))); if (a <= 0.01) return;
+  const [x, y] = proj(lat, lon, Z); if (x < -50 || x > W + 50 || y < -50 || y > H + 50) return;
+  ctx.globalAlpha = a; ctx.fillStyle = color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(x, y, 11, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.font = '800 34px "Plus Jakarta Sans"'; const tw = ctx.measureText(name).width;
+  const bx = Math.min(x + 24, W - tw - 56);
+  ctx.fillStyle = 'rgba(8,14,28,0.82)'; ctx.beginPath(); ctx.roundRect(bx, y - 28, tw + 32, 52, 12); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(name, bx + 16, y + 9); ctx.globalAlpha = 1;
+}
+
+/* ---------- galaksi ---------- */
+function drawGalaxy(t) {
+  const s0 = 0.82 * Math.min(W, H) / (0.9 * GS), s1 = 46, k = io(seg(t, 0.0, 3.3)), sc = s0 * Math.pow(s1 / s0, k);
+  const a = 1 - seg(t, 1.6, 2.8);
+  ctx.save(); ctx.translate(CX, CY); ctx.rotate(0.12 * Math.sin(t * 0.6) - 0.1 * k); ctx.scale(sc, sc);
+  // pusat pandangan beralih dari teras ke Matahari
+  const kp = sm(seg(t, 0, 2.2)), px = GS / 2 + (SUN.x - GS / 2) * kp, py = GS / 2 + (SUN.y - GS / 2) * kp;
+  ctx.translate(-px, -py); ctx.globalAlpha = a; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(gal, 0, 0); ctx.restore(); ctx.globalAlpha = 1;
+  // penanda Matahari
+  const ma = seg(t, 0.8, 1.4) * (1 - seg(t, 2.6, 3.1));
+  if (ma > 0) {
+    const ang = 0.12 * Math.sin(t * 0.6) - 0.1 * k, dx = (SUN.x - px) * sc, dy = (SUN.y - py) * sc;
+    const sx = CX + dx * Math.cos(ang) - dy * Math.sin(ang), sy = CY + dx * Math.sin(ang) + dy * Math.cos(ang);
+    ctx.globalAlpha = ma; ctx.strokeStyle = ACC; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sx, sy, 26 + 6 * Math.sin(t * 5), 0, TAU); ctx.stroke();
+    ctx.fillStyle = ACC; ctx.beginPath(); ctx.arc(sx, sy, 5, 0, TAU); ctx.fill();
+    ctx.font = '500 26px "DM Mono"'; ctx.fillStyle = '#fff';
+    if (PT) { ctx.textAlign = 'center'; ctx.fillText('SISTEM SURIA · ANDA DI SINI', sx, sy + 84); ctx.textAlign = 'left'; }
+    else { ctx.strokeStyle = 'rgba(56,189,248,0.8)'; ctx.beginPath(); ctx.moveTo(sx + 26, sy - 20); ctx.lineTo(sx + 90, sy - 70); ctx.lineTo(sx + 260, sy - 70); ctx.stroke(); ctx.textAlign = 'left'; ctx.fillText('SISTEM SURIA · ANDA DI SINI', sx + 94, sy - 80); }
+    ctx.globalAlpha = 1;
+  }
+}
+function drawStars(t, a) {
+  if (a <= 0) return;
+  for (const s of STARS) { const tw = 0.8 + 0.2 * Math.sin(t * s.f + s.p); ctx.globalAlpha = a * s.b * tw; ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.s, s.s); }
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- sasaran, ayat, adegan lahad dan barzakh ---------- */
+function target(lat, lon, Z, a, txt, t) {
+  if (a <= 0.01) return;
+  const [x, y] = proj(lat, lon, Z); if (x < -100 || x > W + 100 || y < -100 || y > H + 100) return;
+  const ph = (t * 0.9) % 1; ctx.globalAlpha = a * (1 - ph); ctx.strokeStyle = ACC; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, 22 + ph * 90, 0, TAU); ctx.stroke();
+  ctx.globalAlpha = a; ctx.fillStyle = ACC; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, 13, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.font = '500 24px "DM Mono"'; ctx.textAlign = 'left'; const cw = ctx.measureText(txt).width;
+  const px = PT ? x - cw / 2 - 14 : x + 30, py = PT ? y + 48 : y - 52;
+  ctx.fillStyle = 'rgba(8,14,28,0.82)'; ctx.beginPath(); ctx.roundRect(px, py, cw + 28, 44, 10); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.fillText(txt, px + 14, py + 30); ctx.globalAlpha = 1;
+}
+function wrapText(g, text, maxW) { const words = text.split(' '), lines = []; let cur = ''; for (const w of words) { const tst = cur ? cur + ' ' + w : w; if (g.measureText(tst).width > maxW && cur) { lines.push(cur); cur = w; } else cur = tst; } if (cur) lines.push(cur); return lines; }
+function verse(t, t0, t1, ar, ms, ref, top) {
+  const a = out(seg(t, t0, t0 + 0.9)) * (1 - sm(seg(t, t1 - 0.7, t1))); if (a <= 0.01) return;
+  const pw = PT ? W - 90 : 1500; if (PT) top = 300;
+  ctx.font = `600 ${PT ? 34 : 36}px "Plus Jakarta Sans"`; const ls = wrapText(ctx, ms, pw - 120);
+  let fs = PT ? 66 : 76, arLines = [ar]; ctx.direction = 'rtl'; ctx.font = `400 ${fs}px Amiri`;
+  if (PT && ctx.measureText(ar).width > pw - 120) {
+    const words = ar.split(' '); let best = null;
+    for (let k = 1; k < words.length; k++) { const l1 = words.slice(0, k).join(' '), l2 = words.slice(k).join(' '); const mm = Math.max(ctx.measureText(l1).width, ctx.measureText(l2).width); if (!best || mm < best.m) best = { m: mm, l: [l1, l2] }; }
+    arLines = best.l;
+  }
+  while (Math.max(...arLines.map(l => ctx.measureText(l).width)) > pw - 120 && fs > 36) { fs -= 4; ctx.font = `400 ${fs}px Amiri`; }
+  ctx.direction = 'ltr';
+  const lh = fs * 1.5, ph = 40 + arLines.length * lh + 22 + ls.length * 48 + 18 + 32 + 30, x = CX - pw / 2, y = top + (1 - a) * 18;
+  ctx.globalAlpha = a; ctx.fillStyle = 'rgba(6,10,20,0.86)'; ctx.beginPath(); ctx.roundRect(x, y, pw, ph, 22); ctx.fill();
+  ctx.strokeStyle = 'rgba(56,189,248,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = `400 ${fs}px Amiri`; ctx.direction = 'rtl';
+  arLines.forEach((l, i) => ctx.fillText(l, CX, y + 36 + fs * 1.05 + i * lh)); ctx.direction = 'ltr';
+  ctx.font = `600 ${PT ? 34 : 36}px "Plus Jakarta Sans"`; ctx.fillStyle = 'rgba(255,255,255,0.92)'; let ty = y + 40 + arLines.length * lh + 22 + 30; for (const l of ls) { ctx.fillText(l, CX, ty); ty += 48; }
+  ctx.font = '500 22px "DM Mono"'; ctx.fillStyle = ACC; ctx.fillText(ref, CX, ty + 14); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+}
+const LC = document.createElement('canvas'); LC.width = W; LC.height = H; const LG = LC.getContext('2d');
+const BC = document.createElement('canvas'); BC.width = W; BC.height = H; const BG = BC.getContext('2d');
+const SOIL = document.createElement('canvas'); SOIL.width = 1920; SOIL.height = 1700;
+(function () {
+  const g = SOIL.getContext('2d'), R = mulberry32(4242);
+  const gr = g.createLinearGradient(0, 0, 0, 1700); gr.addColorStop(0, '#74502f'); gr.addColorStop(0.4, '#5a3d24'); gr.addColorStop(1, '#34231a'); g.fillStyle = gr; g.fillRect(0, 0, 1920, 1700);
+  for (let i = 0; i < 9000; i++) { const x = R() * 1920, y = R() * 1700, r = 0.8 + R() * 3.2; g.fillStyle = R() < .5 ? `rgba(20,12,6,${(0.08 + R() * 0.18).toFixed(3)})` : `rgba(190,150,100,${(0.04 + R() * 0.1).toFixed(3)})`; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+  for (let i = 0; i < 150; i++) { const x = R() * 1920, y = R() * 1700, rx = 4 + R() * 12, ry = rx * (0.6 + R() * 0.3); g.fillStyle = `rgba(${110 + R() * 40 | 0},${95 + R() * 30 | 0},${80 + R() * 25 | 0},0.55)`; g.beginPath(); g.ellipse(x, y, rx, ry, R() * 3, 0, TAU); g.fill(); }
+})();
+function lbl(g, u, u0, text, x1, y1, x2, y2, align, accent) {
+  const a = out(seg(u, u0, u0 + 0.45)); if (a <= 0.01) return;
+  g.globalAlpha = a;
+  g.strokeStyle = accent ? ACC : 'rgba(255,255,255,0.85)'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(x1, y1, 6, 0, TAU); g.fill();
+  const fsz = PT ? 26 : 30; g.font = `800 ${fsz}px "Plus Jakarta Sans"`; const w = g.measureText(text).width; const bx = align === 'right' ? x2 - w - 36 : x2 - 4;
+  g.fillStyle = 'rgba(8,14,28,0.86)'; g.beginPath(); g.roundRect(bx, y2 - 36, w + 40, 52, 12); g.fill();
+  g.fillStyle = accent ? ACC : '#fff'; g.textAlign = 'left'; g.fillText(text, bx + 20, y2 + 3); g.globalAlpha = 1;
+}
+function drawLahad(g, t) {
+  const u = t - 35.2, SY = 360, sx0 = 700, sx1 = 980, sBot = 1000;
+  const k = PT ? 0.5 : 1, ox = PT ? 130 : 0, ds = io(seg(u, 0, 1.9)), dr = Math.sin(u * 0.9);
+  const off = PT ? (H * 0.40 - k * SY) + ((H * 0.36 - k * 885) - (H * 0.40 - k * SY)) * ds + 4 * dr : -(440 * ds + 5 * dr);
+  const X = x => ox + k * x, Y = y => off + k * y;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.fillStyle = '#05070d'; g.fillRect(0, 0, W, H);
+  g.save(); g.translate(ox, off); g.scale(k, k);
+  let gr = g.createLinearGradient(0, SY - 1400, 0, SY); gr.addColorStop(0, '#070b16'); gr.addColorStop(1, '#22304a'); g.fillStyle = gr; g.fillRect(-1300, SY - 1400, 4600, 1400);
+  const R = mulberry32(9); for (let i = 0; i < 160; i++) { g.globalAlpha = 0.25 + 0.5 * R(); g.fillStyle = '#fff'; g.fillRect(-300 + R() * 2500, SY - 1300 + R() * 1250, 1.8, 1.8); } g.globalAlpha = 1;
+  g.fillStyle = '#0d1424'; for (const [nx, nw] of [[330, 46], [1500, 52], [1650, 46]]) { g.beginPath(); g.roundRect(nx, SY - 92, nw, 92, [nw / 2, nw / 2, 0, 0]); g.fill(); }
+  g.fillStyle = '#34231a'; g.fillRect(-1300, SY + 1600, 4600, 2400);
+  g.drawImage(SOIL, -300, SY + 10); g.drawImage(SOIL, 1620, SY + 10);
+  g.fillStyle = '#2c5428'; g.fillRect(-1300, SY, 4600, 12);
+  g.fillStyle = '#0a0705'; g.fillRect(sx0, SY, sx1 - sx0, sBot - SY);
+  g.beginPath(); g.roundRect(sx1 - 6, 770, 460, 230, [0, 28, 28, 0]); g.fill();
+  g.strokeStyle = 'rgba(255,220,170,0.18)'; g.lineWidth = 3; g.strokeRect(sx0, SY, sx1 - sx0, sBot - SY);
+  const bp = out(seg(u, 2.0, 2.8));
+  if (bp > 0) {
+    g.save(); g.globalAlpha = bp; g.translate(-(1 - bp) * 250, 0);
+    const bx = 1215, by = 888; const bg = g.createRadialGradient(bx - 40, by - 30, 10, bx, by, 170); bg.addColorStop(0, '#f6f0dd'); bg.addColorStop(1, '#c9bf9f');
+    g.fillStyle = bg; g.beginPath(); g.roundRect(bx - 150, by - 90, 300, 180, 84); g.fill();
+    g.strokeStyle = 'rgba(110,100,72,0.38)'; g.lineWidth = 3; for (const kk of [-0.5, 0.1, 0.65]) { g.beginPath(); g.ellipse(bx, by, 150 * (1 - Math.abs(kk) * 0.35), 92, 0, Math.PI * (0.15 + kk * 0.25), Math.PI * (0.85 + kk * 0.25)); g.stroke(); }
+    g.restore();
+  }
+  const pb = out(seg(u, 3.3, 4.0));
+  if (pb > 0) { g.save(); g.globalAlpha = pb; g.translate(-(1 - pb) * 170, 0); for (let i = 0; i < 5; i++) { const py = 772 + i * 45.6; g.fillStyle = i % 2 ? '#8f5f30' : '#a06b38'; g.fillRect(sx1 - 12, py, 22, 44); g.strokeStyle = 'rgba(50,28,10,0.55)'; g.lineWidth = 2; g.strokeRect(sx1 - 12, py, 22, 44); } g.restore(); }
+  const fp = io(seg(u, 4.3, 5.5));
+  if (fp > 0) {
+    const top = sBot - fp * (sBot - SY);
+    g.save(); g.beginPath(); g.rect(sx0 + 2, top, sx1 - sx0 - 4, sBot - top); g.clip(); g.drawImage(SOIL, -300, SY + 10); g.fillStyle = 'rgba(40,20,8,0.18)'; g.fillRect(sx0, SY, sx1 - sx0, sBot - SY); g.restore();
+    const mp = seg(fp, 0.85, 1); if (mp > 0) { g.fillStyle = '#6d4b2c'; g.beginPath(); g.ellipse((sx0 + sx1) / 2, SY, 170, 40 * mp, 0, Math.PI, TAU); g.fill(); }
+  }
+  g.restore();
+  if (!PT) {
+    lbl(g, u, 0.6, 'LIANG KUBUR', X(sx0), Y(620), 560, Y(620), 'right', false);
+    lbl(g, u, 1.6, 'LIANG LAHAD', X(1300), Y(775), 1480, Y(700), 'left', true);
+    const ka = out(seg(u, 1.7, 2.3));
+    if (ka > 0) { g.globalAlpha = ka; g.strokeStyle = ACC; g.lineWidth = 4; g.beginPath(); g.moveTo(1450, Y(885)); g.lineTo(1560, Y(885)); g.lineTo(1546, Y(885) - 13); g.moveTo(1560, Y(885)); g.lineTo(1546, Y(885) + 13); g.stroke(); g.font = '800 28px "Plus Jakarta Sans"'; g.fillStyle = ACC; g.textAlign = 'left'; g.fillText('ARAH KIBLAT', 1580, Y(885) + 10); g.globalAlpha = 1; }
+    lbl(g, u, 2.9, 'JENAZAH BERKAFAN', X(1215), Y(975), 1000, Y(1070), 'left', false);
+    lbl(g, u, 3.7, 'PAPAN PENUTUP LAHAD', X(975), Y(830), 560, Y(830), 'right', false);
+    lbl(g, u, 4.6, 'TANAH TIMBUS', X(760), Y(700), 560, Y(720), 'right', false);
+  } else {
+    lbl(g, u, 0.6, 'LIANG KUBUR', X(sx0), Y(620), 430, 500, 'right', false);
+    lbl(g, u, 1.6, 'LIANG LAHAD', X(1300), Y(775), 700, 540, 'left', true);
+    const ka = out(seg(u, 1.7, 2.3));
+    if (ka > 0) { g.globalAlpha = ka; g.strokeStyle = ACC; g.lineWidth = 4; const ay = Y(885); g.beginPath(); g.moveTo(X(1450), ay); g.lineTo(X(1450) + 110, ay); g.lineTo(X(1450) + 98, ay - 11); g.moveTo(X(1450) + 110, ay); g.lineTo(X(1450) + 98, ay + 11); g.stroke(); g.font = '800 26px "Plus Jakarta Sans"'; g.fillStyle = ACC; g.textAlign = 'left'; g.fillText('ARAH KIBLAT', 860, ay + 66); g.globalAlpha = 1; }
+    lbl(g, u, 2.9, 'JENAZAH BERKAFAN', X(1215), Y(975), 520, Y(1210), 'left', false);
+    lbl(g, u, 3.7, 'PAPAN PENUTUP LAHAD', X(975), Y(830), 430, Y(980), 'right', false);
+    lbl(g, u, 4.6, 'TANAH TIMBUS', X(760), Y(700), 430, 620, 'right', false);
+  }
+  g.fillStyle = '#fff'; for (let i = 0; i < 40; i++) { const px = (R() * W + 14 * Math.sin(t * 0.5 + i)) % W, py = (R() * H - t * 6 * (0.3 + R())) % H; g.globalAlpha = 0.08 + 0.12 * R(); g.fillRect(px, (py + H) % H, 2, 2); } g.globalAlpha = 1;
+}
+const PART = (() => { const R = mulberry32(31337), a = []; for (let i = 0; i < 160; i++) a.push({ x: R() * W, y: R() * H, v: 4 + R() * 10, r: 0.8 + R() * 1.6, a: 0.12 + R() * 0.4, p: R() * TAU }); return a; })();
+function drawBarz(g, t) {
+  const u = t - 42.0;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.fillStyle = '#02030a'; g.fillRect(0, 0, W, H);
+  const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#02030a'); gr.addColorStop(0.7, '#050914'); gr.addColorStop(1, '#02030a'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  for (const p of PART) { const y = ((p.y - t * p.v) % H + H) % H, x = p.x + 22 * Math.sin(t * 0.25 + p.p); g.globalAlpha = p.a * (0.7 + 0.3 * Math.sin(t * 0.8 + p.p)); g.fillStyle = '#bcd6ff'; g.beginPath(); g.arc(x, y, p.r, 0, TAU); g.fill(); }
+  g.globalAlpha = 1;
+  const hw = (W / 2) * out(seg(u, 0.5, 3.2)), hy = PT ? Math.round(H * 0.56) : 700, br = 0.85 + 0.15 * Math.sin(t * 1.1) + 0.35 * seg(t, 48.2, 49.4);
+  const glow = g.createLinearGradient(0, hy - 70, 0, hy + 70); glow.addColorStop(0, 'rgba(56,189,248,0)'); glow.addColorStop(0.5, `rgba(56,189,248,${(0.22 * br).toFixed(3)})`); glow.addColorStop(1, 'rgba(56,189,248,0)');
+  const hg = g.createLinearGradient(CX - hw, 0, CX + hw, 0); hg.addColorStop(0, 'rgba(255,255,255,0)'); hg.addColorStop(0.5, `rgba(255,255,255,${(0.95 * Math.min(1, br)).toFixed(3)})`); hg.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = glow; g.fillRect(CX - hw, hy - 70, hw * 2, 140); g.fillStyle = hg; g.fillRect(CX - hw, hy - 1.5, hw * 2, 3);
+}
+
+/* ---------- seek(t) ---------- */
+window.seek = function (t) {
+  const c = cam(Math.min(t, 34.9)); CAM = c; const Z = c.Z;
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.fillStyle = '#02030a'; ctx.fillRect(0, 0, W, H);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  if (t < 35.8) {
+    if (t < 3.4) drawGalaxy(t);
+    drawStars(t, seg(t, 1.0, 2.2) * (1 - seg(Z, 4.0, 4.8)));
+    if (Z >= 5.4) drawMap(Z);
+    if (t >= 3.0 && Z < 6.3) { const ea = seg(t, 3.0, 3.5), fa = Z >= 5.4 ? 1 - seg(Z, 5.4, 6.3) : 1; drawGlobe(Z, ea * fa); }
+  }
+  if (t >= 34.7 && t < 42.4) { drawLahad(LG, t); ctx.globalAlpha = seg(t, 34.7, 35.6) * (1 - seg(t, 41.4, 42.3)); ctx.drawImage(LC, 0, 0); ctx.globalAlpha = 1; }
+  if (t >= 41.6) { drawBarz(BG, t); ctx.globalAlpha = seg(t, 41.6, 42.6); ctx.drawImage(BC, 0, 0); ctx.globalAlpha = 1; }
+  hud(t, Z);
+  if (Z >= 5.4 && t < 34.6) {
+    pin(KL[0], KL[1], Z, 'Kuala Lumpur', 8.2, 12.6, '#f59e0b');
+    pin(CHERAS[0], CHERAS[1], Z, 'Cheras', 11.6, 15.8, '#f59e0b');
+    target(TLAT, TLON, Z, sm(seg(Z, 14.6, 15.6)) * (1 - seg(t, 24.4, 26.4)), fmtDeg(TLAT, 'U', 'S') + '  ' + fmtDeg(TLON, 'T', 'B') + '  (anggaran)', t);
+    target(CEM[0], CEM[1], Z, sm(seg(t, 27.8, 29.6)), fmtDeg(CEM[0], 'U', 'S') + '  ' + fmtDeg(CEM[1], 'T', 'B') + '  (koordinat rujukan)', t);
+  }
+  verse(t, 20.4, 24.4, 'أَيْنَمَا تَكُونُوا۟ يُدْرِككُّمُ ٱلْمَوْتُ وَلَوْ كُنتُمْ فِى بُرُوجٍ مُّشَيَّدَةٍ', 'Di mana sahaja kamu berada, kematian akan mendapatkan kamu, walaupun kamu berada dalam benteng yang tinggi lagi kukuh.', "AN-NISA' 4:78", 160);
+  verse(t, 30.6, 34.9, 'كُلُّ نَفْسٍ ذَآئِقَةُ ٱلْمَوْتِ', 'Setiap yang bernyawa pasti akan merasai mati.', "ALI 'IMRAN 3:185", 160);
+  verse(t, 44.0, 48.0, 'وَمِن وَرَآئِهِم بَرْزَخٌ إِلَىٰ يَوْمِ يُبْعَثُونَ', 'Dan di hadapan mereka ada (alam) barzakh sehingga hari mereka dibangkitkan.', "AL-MU'MINUN 23:100 (potongan)", 200);
+  // soalan penutup
+  const qp = out(seg(t, 48.3, 49.3));
+  if (qp > 0) { ctx.textAlign = 'center'; if (PT) { const q1 = H * 0.40; for (const [tx2, yy] of [['Bersediakah', q1], ['kita?', q1 + 150]]) mask(0, yy, W, 150, () => { ctx.font = '800 138px "Plus Jakarta Sans"'; ctx.fillStyle = '#fff'; ctx.fillText(tx2, CX, yy); }, qp); } else mask(0, 530, W, 130, () => { ctx.font = '800 118px "Plus Jakarta Sans"'; ctx.fillStyle = '#fff'; ctx.fillText('Bersediakah kita?', CX, 530); }, qp); ctx.textAlign = 'left'; }
+  const fo = seg(t, TEND - 0.7, TEND); if (fo > 0) { ctx.globalAlpha = fo; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+};
+window.collect = function (frames, fps) {
+  COLLECT = new Set();
+  for (let f = 0; f < frames; f++) { const t = f / fps; if (t < 35.8) { const c = cam(Math.min(t, 34.9)); CAM = c; if (c.Z >= 5.4) drawMap(c.Z); } }
+  const out = [...COLLECT]; COLLECT = null; return out;
+};
+window.LV = LV;
+</script>

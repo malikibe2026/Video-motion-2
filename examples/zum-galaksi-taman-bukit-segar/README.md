@@ -28,3 +28,8 @@ Sambungan hingga tanah perkuburan, liang lahad dan alam barzakh. Menggantikan ve
 - **Liang lahad** dan **alam barzakh**: ilustrasi abstrak buatan kod, tanpa memaparkan jenazah. Ditanda "Ilustrasi".
 - **Ayat** (Arab dan terjemahan): An-Nisa' 4:78, Ali 'Imran 3:185, Al-Mu'minun 23:100 (potongan). Teks ditaip daripada ingatan dan perlu disemak dengan mushaf sebelum disiarkan.
 - Fail versi 2: `src/zoom2.html`, `drive2.js`, `fetch_tiles2.py`, `audio2.py` (jalankan seperti langkah di atas, dengan `drive2.js` dan `needed2.json`). Fon Arab: `@fontsource/amiri`.
+
+## Versi WhatsApp
+- `zum-galaksi-ke-alam-barzakh-wa.mp4`: 1280×720 (landskap), 12.8 MB.
+- `zum-galaksi-ke-alam-barzakh-wa-9x16.mp4`: 720×1280 (menegak 9:16, untuk Status), 12.7 MB. Susun atur disusun semula untuk potret (bukan dipotong): `src/zoom3.html?p=1`, `drive3.js`, `fetch_tiles3.py`.
+Had klip Status WhatsApp berbeza mengikut versi aplikasi (secara tradisi 30 saat), jadi semak sebelum memuat naik video 51 saat.
