@@ -20,3 +20,8 @@ Teks Arab dan terjemahan ditaip daripada ingatan. Semak dengan mushaf dan terjem
 
 ## Bina semula
 `src/khutbah.html` (enjin `seek(t)`), `src/drive.js` (render Playwright pada port 8767), `src/audio.py` (bunyi sintesis). Fon: `@fontsource/plus-jakarta-sans`, `@fontsource/dm-mono`, `@fontsource/amiri`.
+
+## Versi tegak 9:16
+- `khutbah-amanah-harta-9x16.mp4`: 1080×1920, 13 MB (sudah di bawah had 16 MB WhatsApp).
+- `khutbah-amanah-harta-9x16-wa.mp4`: 720×1280, 12 MB.
+Render dengan `src/khutbah.html?p=1` melalui `src/drive_p.js`. Susun atur disusun semula untuk tegak (ayat Arab panjang dipecah dua baris, kad faraid/wasiat/hibah dalam grid 2×2).

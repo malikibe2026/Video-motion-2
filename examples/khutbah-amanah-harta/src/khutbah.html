@@ -11,9 +11,11 @@ html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}
 <canvas id="c" width="1920" height="1080"></canvas>
 <script>
 'use strict';
-const W = 1920, H = 1080, CX = W / 2, TEND = 60;
+const PT = new URLSearchParams(location.search).has('p');   // tegak 9:16
+const W = PT ? 1080 : 1920, H = PT ? 1920 : 1080, CX = W / 2, TEND = 60;
+const L = PT ? { x: 76, num: 270, ty: 380, tw: 928, tf: 72, tl: 84, ix: 540, iy: 980, cx: 60, cy: 1330, cw: 960 } : { x: 120, num: 210, ty: 310, tw: 900, tf: 66, tl: 78, ix: 1450, iy: 360, cx: 120, cy: 650, cw: 1680 };
 const GOLD = '#e0b45a', CREAM = '#f4ecd8', TAU = Math.PI * 2;
-const ctx = document.getElementById('c').getContext('2d');
+const cvs = document.getElementById('c'); cvs.width = W; cvs.height = H; const ctx = cvs.getContext('2d');
 const cl = x => Math.max(0, Math.min(1, x));
 const seg = (x, a, b) => cl((x - a) / (b - a));
 const io = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -162,7 +164,9 @@ function gates(u, x, y) {
 function card(c, x, y, w, al, dy) {
   if (al <= 0.01) return;
   const fT = '600 34px "Plus Jakarta Sans"', ls = wrap(c.text, fT, w - 140);
-  let arFs = 58, arH = 0;
+  let arFs = PT ? 56 : 58, arH = 0, AR = c.ar;
+  if (AR && PT) { ctx.direction = 'rtl'; ctx.font = `400 ${arFs}px Amiri`; const o = []; for (const l of AR) { if (ctx.measureText(l).width <= w - 140) { o.push(l); continue; } const ws = l.split(' '); let best = null; for (let k = 1; k < ws.length; k++) { const a = ws.slice(0, k).join(' '), b = ws.slice(k).join(' '), m = Math.max(ctx.measureText(a).width, ctx.measureText(b).width); if (!best || m < best.m) best = { m, l: [a, b] }; } o.push(...best.l); } AR = o; ctx.direction = 'ltr'; }
+  c = Object.assign({}, c, { ar: AR });
   if (c.ar) { ctx.direction = 'rtl'; ctx.font = `400 ${arFs}px Amiri`; while (Math.max(...c.ar.map(l => ctx.measureText(l).width)) > w - 140) { arFs -= 4; ctx.font = `400 ${arFs}px Amiri`; } ctx.direction = 'ltr'; arH = c.ar.length * arFs * 1.5 + 6; }
   const headH = c.head ? 52 : 0, h = 36 + arH + headH + ls.length * 48 + 64;
   ctx.globalAlpha = al; ctx.save(); ctx.translate(0, dy);
@@ -194,56 +198,56 @@ function content(t, i) {
   const s = SC[i], u = t - s.t0, D = s.t1 - s.t0;
   // nombor + tajuk
   const vN = vis(u, D, 0.1), vT = vis(u, D, 0.25);
-  ctx.globalAlpha = vN.al; ctx.font = '500 28px "DM Mono"'; ctx.fillStyle = GOLD; ctx.textAlign = 'left'; ctx.fillText(s.n + '  /  06', 120, 210 + vN.dy); ctx.fillRect(120, 226 + vN.dy, 64, 4); ctx.globalAlpha = 1;
-  const tl = wrap(s.title, '800 66px "Plus Jakarta Sans"', 900);
-  ctx.globalAlpha = vT.e; tl.forEach((l, k) => maskText(l, 120, 310 + k * 78 - (1 - vT.e) * 26, '800 66px "Plus Jakarta Sans"', CREAM, out(seg(u, 0.25 + k * 0.12, 0.95 + k * 0.12)), 72)); ctx.globalAlpha = 1;
-  let by = 310 + (tl.length - 1) * 78 + 80;
+  ctx.globalAlpha = vN.al; ctx.font = '500 28px "DM Mono"'; ctx.fillStyle = GOLD; ctx.textAlign = 'left'; ctx.fillText(s.n + '  /  06', L.x, L.num + vN.dy); ctx.fillRect(L.x, L.num + 16 + vN.dy, 64, 4); ctx.globalAlpha = 1;
+  const TF = `800 ${L.tf}px "Plus Jakarta Sans"`, tl = wrap(s.title, TF, L.tw);
+  ctx.globalAlpha = vT.e; tl.forEach((l, k) => maskText(l, L.x, L.ty + k * L.tl - (1 - vT.e) * 26, TF, CREAM, out(seg(u, 0.25 + k * 0.12, 0.95 + k * 0.12)), L.tf + 6)); ctx.globalAlpha = 1;
+  let by = L.ty + (tl.length - 1) * L.tl + (PT ? 96 : 80);
   s.pts.forEach((p, k) => {
     const v = vis(u, D, 0.9 + k * 0.28); if (v.al <= 0.01) return;
-    ctx.globalAlpha = v.al; ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(132, by + k * 60 - 11 + v.dy, 7, 0, TAU); ctx.fill();
-    ctx.font = '600 34px "Plus Jakarta Sans"'; ctx.fillStyle = 'rgba(244,236,216,0.92)'; ctx.fillText(p, 160, by + k * 60 + v.dy); ctx.globalAlpha = 1;
+    ctx.globalAlpha = v.al; ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(L.x + 12, by + k * 62 - 11 + v.dy, 7, 0, TAU); ctx.fill();
+    ctx.font = '600 34px "Plus Jakarta Sans"'; ctx.fillStyle = 'rgba(244,236,216,0.92)'; ctx.fillText(p, L.x + 40, by + k * 62 + v.dy); ctx.globalAlpha = 1;
   });
   // ilustrasi
   const vI = vis(u, D, 0.35);
   if (vI.al > 0.01) {
-    ctx.save(); ctx.globalAlpha = vI.al; const sc = 0.9 + 0.1 * vI.p; ctx.translate(1450, 360 + vI.dy); ctx.scale(sc, sc); ctx.translate(-1450, -360);
-    if (i === 1) { hourglass(u, D, 1300, 400); const vC = vis(u, D, 1.0); ctx.globalAlpha = vI.al * vC.p; ctx.textAlign = 'center'; ctx.font = '800 88px "Plus Jakarta Sans"'; ctx.fillStyle = GOLD; ctx.fillText(Math.round(60 * out(seg(u, 1.0, 2.2))) + (u > 2.2 ? '-70' : ''), 1640, 420); ctx.font = '500 26px "DM Mono"'; ctx.fillStyle = CREAM; ctx.fillText('TAHUN', 1640, 464); ctx.textAlign = 'left'; }
-    if (i === 2) scales(u, 1450, 400);
-    if (i === 3) amanahArt(u, 1450, 390);
-    if (i === 4) mosque(u, 1450, 400);
-    if (i === 5) warnArt(u, 1450, 380);
-    if (i === 6) gates(u, 1450, 400);
+    ctx.save(); ctx.globalAlpha = vI.al; const sc = 0.9 + 0.1 * vI.p; ctx.translate(L.ix, L.iy + vI.dy); ctx.scale(sc, sc); ctx.translate(-L.ix, -L.iy);
+    if (i === 1) { hourglass(u, D, PT ? 360 : 1300, PT ? 980 : 400); const vC = vis(u, D, 1.0); ctx.globalAlpha = vI.al * vC.p; ctx.textAlign = 'center'; ctx.font = '800 88px "Plus Jakarta Sans"'; ctx.fillStyle = GOLD; ctx.fillText(Math.round(60 * out(seg(u, 1.0, 2.2))) + (u > 2.2 ? '-70' : ''), PT ? 800 : 1640, PT ? 1000 : 420); ctx.font = '500 26px "DM Mono"'; ctx.fillStyle = CREAM; ctx.fillText('TAHUN', PT ? 800 : 1640, PT ? 1044 : 464); ctx.textAlign = 'left'; }
+    if (i === 2) scales(u, L.ix, PT ? 980 : 400);
+    if (i === 3) amanahArt(u, L.ix, PT ? 1000 : 390);
+    if (i === 4) mosque(u, L.ix, PT ? 980 : 400);
+    if (i === 5) warnArt(u, L.ix, PT ? 960 : 380);
+    if (i === 6) gates(u, L.ix, PT ? 990 : 400);
     ctx.restore();
   }
   // kad / jubin
-  if (s.card) { const v = vis(u, D, 2.4); card(s.card, 120, 650, W - 240, v.al, v.dy); }
+  if (s.card) { const v = vis(u, D, 2.4); card(s.card, L.cx, L.cy, L.cw, v.al, v.dy); }
   if (i === 3) {
     const T = [['zakat', 'ZAKAT', 'Wajib apabila cukup syarat.'], ['faraid', 'FARAID', 'Pembahagian pusaka selepas kematian.'], ['wasiat', 'WASIAT', 'Dilaksana selepas kematian, had 1/3 harta.'], ['hibah', 'HIBAH', 'Pemberian kepada sesiapa semasa hidup.']];
-    T.forEach((r, k) => { const v = vis(u, D, 2.3 + k * 0.3); tile(120 + k * 427, 660, 400, 250, r[0], r[1], r[2], v.al, v.dy); });
-    const v = vis(u, D, 3.8); ctx.globalAlpha = v.al; ctx.font = '500 22px "DM Mono"'; ctx.fillStyle = GOLD; ctx.textAlign = 'center'; ctx.fillText('FAHAMI HUKUM SETIAP SATU · RUJUK PIHAK BERAUTORITI', CX, 965 + v.dy); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    T.forEach((r, k) => { const v = vis(u, D, 2.3 + k * 0.3); if (PT) tile(60 + (k % 2) * 510, 1230 + Math.floor(k / 2) * 270, 450, 240, r[0], r[1], r[2], v.al, v.dy); else tile(120 + k * 427, 660, 400, 250, r[0], r[1], r[2], v.al, v.dy); });
+    const v = vis(u, D, 3.8); ctx.globalAlpha = v.al; ctx.font = '500 22px "DM Mono"'; ctx.fillStyle = GOLD; ctx.textAlign = 'center'; ctx.fillText('FAHAMI HUKUM SETIAP SATU · RUJUK PIHAK BERAUTORITI', CX, (PT ? 1800 : 965) + v.dy); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
 }
 function intro(t) {
   const s = SC[0], u = t, D = s.t1;
   const e = 1 - io(seg(u, D - 0.55, D - 0.05));
-  ctx.globalAlpha = e; star8(CX, 300, 110, out(seg(u, 0.1, 1.6)), 4, GOLD); star8(CX, 300, 70, out(seg(u, 0.4, 1.8)), 2, 'rgba(244,236,216,0.7)');
-  maskText('RINGKASAN KHUTBAH JUMAAT', CX, 500, '500 28px "DM Mono"', GOLD, out(seg(u, 0.5, 1.2)), 32, 'center');
-  maskText('Hakikat Usia, Amanah Harta', CX, 610, '800 80px "Plus Jakarta Sans"', CREAM, out(seg(u, 0.7, 1.5)), 88, 'center');
-  maskText('& Kunci Kejayaan Akhirat', CX, 705, '800 80px "Plus Jakarta Sans"', GOLD, out(seg(u, 0.9, 1.7)), 88, 'center');
+  const Y0 = PT ? 560 : 300; ctx.globalAlpha = e; star8(CX, Y0, 110, out(seg(u, 0.1, 1.6)), 4, GOLD); star8(CX, Y0, 70, out(seg(u, 0.4, 1.8)), 2, 'rgba(244,236,216,0.7)');
+  maskText('RINGKASAN KHUTBAH JUMAAT', CX, Y0 + 200, '500 28px "DM Mono"', GOLD, out(seg(u, 0.5, 1.2)), 32, 'center');
+  const TL = PT ? [['Hakikat Usia,', CREAM], ['Amanah Harta', CREAM], ['& Kunci Kejayaan', GOLD], ['Akhirat', GOLD]] : [['Hakikat Usia, Amanah Harta', CREAM], ['& Kunci Kejayaan Akhirat', GOLD]];
+  TL.forEach((r, k) => maskText(r[0], CX, Y0 + 310 + k * 96, '800 80px "Plus Jakarta Sans"', r[1], out(seg(u, 0.7 + k * 0.2, 1.5 + k * 0.2)), 88, 'center'));
   ctx.globalAlpha = 1;
 }
 function outro(t) {
   const u = t - SC[7].t0;
-  star8(CX, 230, 70, out(seg(u, 0.1, 1.4)), 3, GOLD);
-  const L = [['Usia singkat.', CREAM], ['Harta amanah.', CREAM], ['Akhirat kekal.', GOLD]];
-  L.forEach((r, k) => maskText(r[0], CX, 420 + k * 120, '800 96px "Plus Jakarta Sans"', r[1], out(seg(u, 0.4 + k * 0.45, 1.2 + k * 0.45)), 104, 'center'));
+  const Y1 = PT ? 560 : 230; star8(CX, Y1, 70, out(seg(u, 0.1, 1.4)), 3, GOLD);
+  const L2 = [['Usia singkat.', CREAM], ['Harta amanah.', CREAM], ['Akhirat kekal.', GOLD]];
+  L2.forEach((r, k) => maskText(r[0], CX, Y1 + 190 + k * 120, '800 96px "Plus Jakarta Sans"', r[1], out(seg(u, 0.4 + k * 0.45, 1.2 + k * 0.45)), 104, 'center'));
   ctx.globalAlpha = out(seg(u, 2.2, 3.0)); ctx.textAlign = 'center'; ctx.font = '500 24px "DM Mono"'; ctx.fillStyle = 'rgba(244,236,216,0.7)';
-  ctx.fillText('WALLAHU A\'LAM · TEKS AYAT PERLU DISEMAK DENGAN MUSHAF', CX, 860); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  if (PT) { ctx.fillText('WALLAHU A\'LAM', CX, 1240); ctx.fillText('TEKS AYAT PERLU DISEMAK DENGAN MUSHAF', CX, 1280); } else ctx.fillText('WALLAHU A\'LAM · TEKS AYAT PERLU DISEMAK DENGAN MUSHAF', CX, 860); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
 }
 function chrome(t) {
   const a = seg(t, 4.3, 5.0) * (1 - seg(t, 55.2, 55.7)); if (a <= 0) return;
-  ctx.globalAlpha = a; ctx.font = '500 22px "DM Mono"'; ctx.fillStyle = 'rgba(224,180,90,0.85)'; ctx.textAlign = 'left'; ctx.fillText('RINGKASAN KHUTBAH JUMAAT', 120, 96);
-  const i = sceneAt(t); for (let k = 1; k <= 6; k++) { const x = 1190 + (k - 1) * 105, p = k < i ? 1 : k > i ? 0 : seg(t, SC[k].t0, SC[k].t1); ctx.fillStyle = 'rgba(244,236,216,0.18)'; ctx.fillRect(x, 86, 95, 5); ctx.fillStyle = GOLD; ctx.fillRect(x, 86, 95 * p, 5); }
+  ctx.globalAlpha = a; ctx.font = '500 22px "DM Mono"'; ctx.fillStyle = 'rgba(224,180,90,0.85)'; ctx.textAlign = 'left'; ctx.fillText('RINGKASAN KHUTBAH JUMAAT', L.x, PT ? 116 : 96);
+  const i = sceneAt(t), sw = PT ? 146 : 95, gx = PT ? 10.4 : 10, x0 = PT ? L.x : 1190, py = PT ? 150 : 86; for (let k = 1; k <= 6; k++) { const x = x0 + (k - 1) * (sw + gx), p = k < i ? 1 : k > i ? 0 : seg(t, SC[k].t0, SC[k].t1); ctx.fillStyle = 'rgba(244,236,216,0.18)'; ctx.fillRect(x, py, sw, 5); ctx.fillStyle = GOLD; ctx.fillRect(x, py, sw * p, 5); }
   ctx.globalAlpha = 1;
 }
 
