@@ -1,0 +1,262 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Khutbah Amanah Harta</title>
+<style>
+@font-face{font-family:'Plus Jakarta Sans';font-weight:600;src:url(node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:800;src:url(node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-800-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Mono';font-weight:500;src:url(node_modules/@fontsource/dm-mono/files/dm-mono-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'Amiri';font-weight:400;src:url(node_modules/@fontsource/amiri/files/amiri-arabic-400-normal.woff2) format('woff2')}
+html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}
+</style>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+'use strict';
+const W = 1920, H = 1080, CX = W / 2, TEND = 60;
+const GOLD = '#e0b45a', CREAM = '#f4ecd8', TAU = Math.PI * 2;
+const ctx = document.getElementById('c').getContext('2d');
+const cl = x => Math.max(0, Math.min(1, x));
+const seg = (x, a, b) => cl((x - a) / (b - a));
+const io = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const out = x => 1 - Math.pow(1 - x, 4);
+const sm = x => x * x * (3 - 2 * x);
+const mix = (a, b, k) => a + (b - a) * k;
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hex(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+function wrap(text, font, maxW) { ctx.font = font; const ws = text.split(' '), ls = []; let cur = ''; for (const w of ws) { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > maxW && cur) { ls.push(cur); cur = w; } else cur = t; } if (cur) ls.push(cur); return ls; }
+
+/* ---------- babak ---------- */
+const SC = [
+  { t0: 0, t1: 4.5, tint: '#13306a' },
+  { t0: 4.5, t1: 12.5, tint: '#1b4a8f', n: '01', title: 'Manfaatkan Usia untuk Amal Soleh',
+    pts: ['Perkukuh iman dan jaga solat', 'Ikut sunnah, tinggalkan maksiat', 'Takwa: sedar Allah sentiasa melihat'],
+    card: { text: '"Umur umatku antara enam puluh hingga tujuh puluh tahun, dan sedikit sahaja yang melebihinya."', ref: 'MAKSUD HADIS RIWAYAT AT-TIRMIDZI DAN IBN MAJAH' } },
+  { t0: 12.5, t1: 21.5, tint: '#1e6a50', n: '02', title: 'Harta dan Anak-anak Ialah Ujian',
+    pts: ['Rezeki dan keluarga menguji ketaatan', 'Jangan sampai ibadah diabaikan', 'Didik anak dengan kebaikan'],
+    card: { ar: ['إِنَّمَآ أَمْوَٰلُكُمْ وَأَوْلَـٰدُكُمْ فِتْنَةٌ ۚ وَٱللَّهُ عِندَهُۥٓ أَجْرٌ عَظِيمٌ'], text: 'Sesungguhnya harta benda kamu dan anak-anak kamu itu hanyalah ujian, dan di sisi Allah jualah pahala yang besar.', ref: "AT-TAGHABUN 64:15 · LIHAT JUGA AL-MUNAFIQUN 63:9" } },
+  { t0: 21.5, t1: 30.5, tint: '#8a6118', n: '03', title: 'Urus Harta sebagai Amanah',
+    pts: ['Harta sementara dan akan dipersoalkan', 'Tunaikan zakat, nafkah dan infak', 'Urus pusaka supaya hak keluarga terpelihara'] },
+  { t0: 30.5, t1: 37.5, tint: '#523a85', n: '04', title: 'Contohi Kemurahan Hati',
+    pts: ['Rasulullah SAW dan para sahabat', 'Kekayaan ialah peluang berbuat baik', 'Bantu orang lain, perbanyak amalan'],
+    card: { head: 'SAIDINA UTHMAN BIN AFFAN  ·  ABDUL RAHMAN BIN AUF', text: 'Kaya, namun harta mereka digunakan untuk ketaatan dan membantu agama.', ref: 'TELADAN SAHABAT YANG DERMAWAN' } },
+  { t0: 37.5, t1: 46.5, tint: '#6e1c33', n: '05', title: 'Jauhi Sifat Bakhil',
+    pts: ['Zakat wajib bagi yang cukup syarat', 'Tunaikan hak pada harta'],
+    card: { text: '"Harta yang tidak ditunaikan zakatnya akan dijelmakan pada hari kiamat sebagai ular jantan yang membelit pemiliknya sambil berkata: Akulah hartamu, akulah simpananmu."', ref: 'MAKSUD HADIS RIWAYAT AL-BUKHARI' } },
+  { t0: 46.5, t1: 55.5, tint: '#15607a', n: '06', title: 'Bersedia untuk Akhirat',
+    pts: ['Tahan hawa nafsu, utamakan ketaatan', 'Amal soleh dengan ikhlas', 'Harapkan keampunan dan rahmat Allah'],
+    card: { ar: ['وَأَمَّا مَنْ خَافَ مَقَامَ رَبِّهِۦ وَنَهَى ٱلنَّفْسَ عَنِ ٱلْهَوَىٰ', 'فَإِنَّ ٱلْجَنَّةَ هِىَ ٱلْمَأْوَىٰ'], text: 'Adapun orang yang takut akan kebesaran Tuhannya dan menahan dirinya daripada hawa nafsu, maka sesungguhnya syurgalah tempat tinggalnya.', ref: "AN-NAZI'AT 79:40-41" } },
+  { t0: 55.5, t1: TEND, tint: '#13306a' },
+];
+function sceneAt(t) { for (let i = SC.length - 1; i >= 0; i--) if (t >= SC[i].t0) return i; return 0; }
+
+/* ---------- latar: corak bintang lapan bucu ---------- */
+const TILE = document.createElement('canvas'); TILE.width = TILE.height = 180;
+(function () {
+  const g = TILE.getContext('2d'); g.strokeStyle = GOLD; g.lineWidth = 1.4;
+  const star = (cx, cy, R) => { g.beginPath(); for (let k = 0; k < 16; k++) { const r = k % 2 ? R * 0.62 : R, a = k * Math.PI / 8 - Math.PI / 2; g.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); } g.closePath(); g.stroke(); };
+  star(90, 90, 52); for (const [x, y] of [[0, 0], [180, 0], [0, 180], [180, 180]]) star(x, y, 30);
+  g.beginPath(); g.moveTo(0, 90); g.lineTo(38, 90); g.moveTo(142, 90); g.lineTo(180, 90); g.moveTo(90, 0); g.lineTo(90, 38); g.moveTo(90, 142); g.lineTo(90, 180); g.stroke();
+})();
+const PAT = ctx.createPattern(TILE, 'repeat');
+const DUST = (() => { const R = mulberry32(5), a = []; for (let i = 0; i < 70; i++) a.push({ x: R() * W, y: R() * H, v: 6 + R() * 14, r: 0.8 + R() * 1.8, a: 0.08 + R() * 0.22, p: R() * TAU }); return a; })();
+function background(t) {
+  ctx.fillStyle = '#050b18'; ctx.fillRect(0, 0, W, H);
+  const i = sceneAt(t), k = i > 0 ? sm(seg(t, SC[i].t0 - 0.4, SC[i].t0 + 0.5)) : 1;
+  const a = hex(SC[Math.max(0, i - 1)].tint), b = hex(SC[i].tint), c = a.map((v, j) => Math.round(mix(v, b[j], k)));
+  let g = ctx.createRadialGradient(W * 0.78, H * 0.18, 40, W * 0.78, H * 0.18, W * 0.85);
+  g.addColorStop(0, `rgba(${c},0.62)`); g.addColorStop(1, 'rgba(5,11,24,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  g = ctx.createRadialGradient(W * 0.1, H * 1.05, 20, W * 0.1, H * 1.05, W * 0.6);
+  g.addColorStop(0, `rgba(${c},0.32)`); g.addColorStop(1, 'rgba(5,11,24,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  PAT.setTransform(new DOMMatrix().translateSelf(W / 2, H / 2).rotateSelf(t * 0.6).translateSelf(-W / 2 + t * 6, -H / 2));
+  ctx.globalAlpha = 0.055; ctx.fillStyle = PAT; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+  for (const d of DUST) { const y = ((d.y - t * d.v) % H + H) % H; ctx.globalAlpha = d.a * (0.7 + 0.3 * Math.sin(t + d.p)); ctx.fillStyle = CREAM; ctx.beginPath(); ctx.arc(d.x + 18 * Math.sin(t * 0.3 + d.p), y, d.r, 0, TAU); ctx.fill(); }
+  ctx.globalAlpha = 1;
+  const v = ctx.createRadialGradient(CX, H / 2, H * 0.45, CX, H / 2, H * 1.05); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.55)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+}
+
+/* ---------- penolong animasi ---------- */
+function vis(u, D, a, last) { const p = out(seg(u, a, a + 0.7)), e = last ? 1 : 1 - io(seg(u, D - 0.55, D - 0.05)); return { p, e, al: p * e, dy: (1 - p) * 40 - (1 - e) * 26 }; }
+function maskText(s, x, y, font, color, p, h, align) {
+  ctx.save(); ctx.beginPath(); ctx.rect(0, y - h, W, h * 1.32); ctx.clip(); ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align || 'left';
+  ctx.fillText(s, x, y + (1 - p) * h * 1.15); ctx.restore();
+}
+function star8(cx, cy, R, p, lw, color) {
+  ctx.beginPath(); for (let k = 0; k <= 16; k++) { const r = k % 2 ? R * 0.62 : R, a = k * Math.PI / 8 - Math.PI / 2; ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); }
+  const L = 16 * 2 * R * 0.45; ctx.setLineDash([L * 1.2, L * 1.2]); ctx.lineDashOffset = L * 1.2 * (1 - p);
+  ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.stroke(); ctx.setLineDash([]);
+}
+
+/* ---------- ilustrasi ---------- */
+function hourglass(u, D, x, y) {
+  const fl = seg(u, 0.6, D - 0.6);
+  ctx.save(); ctx.translate(x, y);
+  const bulb = (dir) => { ctx.beginPath(); ctx.moveTo(-120, dir * -190); ctx.bezierCurveTo(-120, dir * -70, -14, dir * -40, -10, 0); ctx.lineTo(10, 0); ctx.bezierCurveTo(14, dir * -40, 120, dir * -70, 120, dir * -190); ctx.closePath(); };
+  // pasir atas
+  ctx.save(); bulb(1); ctx.clip(); const top = mix(-150, -24, fl); ctx.fillStyle = '#e8b866'; ctx.fillRect(-130, top, 260, 200); ctx.restore();
+  // pasir bawah (timbunan)
+  ctx.save(); bulb(-1); ctx.clip(); const hgt = mix(0, 120, fl); ctx.fillStyle = '#e8b866'; ctx.beginPath(); ctx.moveTo(-130, 192); ctx.lineTo(-130, 192 - hgt * 0.5); ctx.quadraticCurveTo(0, 192 - hgt * 1.5, 130, 192 - hgt * 0.5); ctx.lineTo(130, 192); ctx.fill(); ctx.restore();
+  if (fl > 0 && fl < 1) { ctx.fillStyle = '#e8b866'; ctx.fillRect(-2.5, 0, 5, 190 - hgt); }
+  ctx.strokeStyle = 'rgba(244,236,216,0.8)'; ctx.lineWidth = 4; bulb(1); ctx.stroke(); bulb(-1); ctx.stroke();
+  ctx.fillStyle = GOLD; rr(-160, -222, 320, 30, 12); ctx.fill(); rr(-160, 192, 320, 30, 12); ctx.fill();
+  ctx.fillRect(-150, -192, 12, 384); ctx.fillRect(138, -192, 12, 384);
+  ctx.restore();
+}
+function scales(u, x, y) {
+  const a = 0.13 * Math.sin(u * 1.4) * Math.exp(-0.18 * u) + 0.02 * Math.sin(u * 0.7);
+  ctx.save(); ctx.translate(x, y);
+  ctx.fillStyle = GOLD; ctx.fillRect(-7, -170, 14, 330); rr(-120, 160, 240, 24, 10); ctx.fill(); ctx.beginPath(); ctx.arc(0, -178, 16, 0, TAU); ctx.fill();
+  ctx.save(); ctx.translate(0, -160); ctx.rotate(a); rr(-230, -7, 460, 14, 7); ctx.fill(); ctx.restore();
+  for (const s of [-1, 1]) {
+    const ex = s * 220 * Math.cos(a), ey = -160 + s * 220 * Math.sin(a);
+    ctx.strokeStyle = 'rgba(224,180,90,0.85)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - 70, ey + 130); ctx.moveTo(ex, ey); ctx.lineTo(ex + 70, ey + 130); ctx.stroke();
+    ctx.fillStyle = GOLD; ctx.beginPath(); ctx.ellipse(ex, ey + 132, 84, 18, 0, 0, Math.PI); ctx.fill();
+    if (s < 0) { for (let k = 0; k < 4; k++) { ctx.fillStyle = k % 2 ? '#f0c76c' : '#d9a441'; ctx.beginPath(); ctx.ellipse(ex, ey + 118 - k * 16, 40, 11, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(90,60,10,0.6)'; ctx.lineWidth = 2; ctx.stroke(); } }
+    else { ctx.fillStyle = CREAM; ctx.beginPath(); ctx.moveTo(ex - 40, ey + 126); ctx.lineTo(ex - 40, ey + 92); ctx.lineTo(ex, ey + 62); ctx.lineTo(ex + 40, ey + 92); ctx.lineTo(ex + 40, ey + 126); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#1e6a50'; ctx.fillRect(ex - 10, ey + 104, 20, 22); }
+    ctx.font = '500 24px "DM Mono"'; ctx.fillStyle = GOLD; ctx.textAlign = 'center'; ctx.fillText(s < 0 ? 'HARTA' : 'KELUARGA', ex, ey + 190);
+  }
+  ctx.restore();
+}
+function coins(x, y, n, dim) {
+  for (let k = 0; k < n; k++) { const yy = y - k * 22; ctx.fillStyle = dim ? `rgba(${Math.round(mix(240, 120, dim))},${Math.round(mix(199, 110, dim))},${Math.round(mix(108, 100, dim))},1)` : (k % 2 ? '#f0c76c' : '#d9a441'); ctx.beginPath(); ctx.ellipse(x, yy, 120, 30, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(70,45,10,0.55)'; ctx.lineWidth = 3; ctx.stroke(); }
+}
+function amanahArt(u, x, y) {
+  coins(x, y + 60, 6, 0);
+  ctx.font = '800 40px "Plus Jakarta Sans"'; ctx.fillStyle = CREAM; ctx.textAlign = 'center'; ctx.fillText('AMANAH', x, y + 170);
+  for (let k = 0; k < 4; k++) {
+    const p = out(seg(u, 1.2 + k * 0.2, 2.0 + k * 0.2)); if (p <= 0) continue;
+    const ang = -Math.PI / 2 + (k - 1.5) * 0.62, r0 = 150, r1 = r0 + 70 * p;
+    ctx.strokeStyle = GOLD; ctx.lineWidth = 5; ctx.globalAlpha *= 1; ctx.beginPath(); ctx.moveTo(x + r0 * Math.cos(ang), y - 30 + r0 * Math.sin(ang)); ctx.lineTo(x + r1 * Math.cos(ang), y - 30 + r1 * Math.sin(ang)); ctx.stroke();
+    ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(x + r1 * Math.cos(ang), y - 30 + r1 * Math.sin(ang), 9, 0, TAU); ctx.fill();
+  }
+}
+function mosque(u, x, y) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.save(); ctx.rotate(u * 0.08); for (let k = 0; k < 14; k++) { ctx.rotate(TAU / 14); const g = ctx.createLinearGradient(0, 0, 0, -420); g.addColorStop(0, 'rgba(224,180,90,0.16)'); g.addColorStop(1, 'rgba(224,180,90,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(14, 0); ctx.lineTo(60, -420); ctx.lineTo(-60, -420); ctx.fill(); } ctx.restore();
+  ctx.fillStyle = '#efe4c8';
+  ctx.beginPath(); ctx.ellipse(0, 40, 150, 170, 0, Math.PI, TAU); ctx.fill();
+  ctx.fillRect(-12, -150, 24, 30); ctx.beginPath(); ctx.arc(0, -168, 12, 0, TAU); ctx.fill();
+  ctx.fillRect(-230, 40, 460, 150);
+  for (const s of [-1, 1]) { ctx.fillRect(s * 300 - 24, -170, 48, 360); ctx.beginPath(); ctx.ellipse(s * 300, -170, 24, 40, 0, Math.PI, TAU); ctx.fill(); ctx.fillRect(s * 300 - 34, -60, 68, 14); }
+  ctx.fillStyle = '#f2c46d';
+  for (let k = -2; k <= 2; k++) { const wx = k * 80; ctx.globalAlpha = 0.75 + 0.25 * Math.sin(u * 2 + k); ctx.beginPath(); ctx.moveTo(wx - 20, 170); ctx.lineTo(wx - 20, 105); ctx.arc(wx, 105, 20, Math.PI, TAU); ctx.lineTo(wx + 20, 170); ctx.fill(); }
+  ctx.globalAlpha = 1; ctx.restore();
+}
+function warnArt(u, x, y) {
+  const dim = seg(u, 1.0, 4.0); coins(x, y + 70, 6, dim);
+  for (let k = 0; k < 2; k++) { const ph = ((u * 0.7 + k * 0.5) % 1); ctx.globalAlpha = (1 - ph) * 0.8 * seg(u, 1.0, 1.6); ctx.strokeStyle = '#e0566e'; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(x, y + 10, 170 + ph * 120, 110 + ph * 80, 0, 0, TAU); ctx.stroke(); }
+  ctx.globalAlpha = 1; ctx.font = '500 24px "DM Mono"'; ctx.fillStyle = '#f19aa9'; ctx.textAlign = 'center'; ctx.fillText('HARTA TANPA ZAKAT', x, y + 190);
+}
+function gates(u, x, y) {
+  const arch = (cx, w, h) => { ctx.beginPath(); ctx.moveTo(cx - w / 2, y + 150); ctx.lineTo(cx - w / 2, y - h + w / 2); ctx.arc(cx, y - h + w / 2, w / 2, Math.PI, TAU); ctx.lineTo(cx + w / 2, y + 150); ctx.closePath(); };
+  // syurga
+  const lx = x - 170, g1 = ctx.createRadialGradient(lx, y, 10, lx, y, 220); g1.addColorStop(0, 'rgba(255,240,200,0.95)'); g1.addColorStop(1, 'rgba(224,180,90,0.25)');
+  arch(lx, 200, 230); ctx.fillStyle = g1; ctx.fill(); ctx.strokeStyle = GOLD; ctx.lineWidth = 6; ctx.stroke();
+  // jahim
+  const rx = x + 170, g2 = ctx.createLinearGradient(0, y + 150, 0, y - 120); g2.addColorStop(0, `rgba(190,50,40,${(0.7 + 0.15 * Math.sin(u * 3)).toFixed(3)})`); g2.addColorStop(1, 'rgba(20,10,14,0.95)');
+  arch(rx, 200, 230); ctx.fillStyle = g2; ctx.fill(); ctx.strokeStyle = 'rgba(160,70,70,0.9)'; ctx.lineWidth = 6; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.font = '800 32px "Plus Jakarta Sans"'; ctx.fillStyle = CREAM; ctx.fillText('SYURGA', lx, y + 200); ctx.fillText('JAHIM', rx, y + 200);
+  ctx.font = '500 20px "DM Mono"'; ctx.fillStyle = 'rgba(244,236,216,0.7)'; ctx.fillText('MENAHAN HAWA NAFSU', lx, y + 232); ctx.fillText('MELAMPAUI BATAS', rx, y + 232);
+}
+
+/* ---------- kad ayat / hadis ---------- */
+function card(c, x, y, w, al, dy) {
+  if (al <= 0.01) return;
+  const fT = '600 34px "Plus Jakarta Sans"', ls = wrap(c.text, fT, w - 140);
+  let arFs = 58, arH = 0;
+  if (c.ar) { ctx.direction = 'rtl'; ctx.font = `400 ${arFs}px Amiri`; while (Math.max(...c.ar.map(l => ctx.measureText(l).width)) > w - 140) { arFs -= 4; ctx.font = `400 ${arFs}px Amiri`; } ctx.direction = 'ltr'; arH = c.ar.length * arFs * 1.5 + 6; }
+  const headH = c.head ? 52 : 0, h = 36 + arH + headH + ls.length * 48 + 64;
+  ctx.globalAlpha = al; ctx.save(); ctx.translate(0, dy);
+  rr(x, y, w, h, 24); ctx.fillStyle = 'rgba(4,8,18,0.74)'; ctx.fill(); ctx.strokeStyle = 'rgba(224,180,90,0.55)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = GOLD; ctx.fillRect(x, y + 24, 6, h - 48);
+  let ty = y + 36; ctx.textAlign = 'center';
+  if (c.ar) { ctx.direction = 'rtl'; ctx.font = `400 ${arFs}px Amiri`; ctx.fillStyle = '#fff'; c.ar.forEach((l, i) => ctx.fillText(l, x + w / 2, ty + arFs * 1.0 + i * arFs * 1.5)); ctx.direction = 'ltr'; ty += arH; }
+  if (c.head) { ctx.font = '800 30px "Plus Jakarta Sans"'; ctx.fillStyle = GOLD; ctx.fillText(c.head, x + w / 2, ty + 32); ty += headH; }
+  ctx.font = fT; ctx.fillStyle = 'rgba(244,236,216,0.95)'; ty += 34; for (const l of ls) { ctx.fillText(l, x + w / 2, ty); ty += 48; }
+  ctx.font = '500 22px "DM Mono"'; ctx.fillStyle = GOLD; ctx.fillText(c.ref, x + w / 2, ty + 8);
+  ctx.restore(); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+}
+function tile(x, y, w, h, icon, title, desc, al, dy) {
+  if (al <= 0.01) return; ctx.globalAlpha = al; ctx.save(); ctx.translate(0, dy);
+  rr(x, y, w, h, 20); ctx.fillStyle = 'rgba(4,8,18,0.72)'; ctx.fill(); ctx.strokeStyle = 'rgba(224,180,90,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+  const ix = x + 62, iy = y + 64; ctx.fillStyle = 'rgba(224,180,90,0.16)'; ctx.beginPath(); ctx.arc(ix, iy, 40, 0, TAU); ctx.fill();
+  ctx.strokeStyle = GOLD; ctx.fillStyle = GOLD; ctx.lineWidth = 4;
+  if (icon === 'zakat') { ctx.beginPath(); ctx.arc(ix, iy, 22, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(ix, iy, 13, 0, TAU); ctx.stroke(); }
+  if (icon === 'faraid') { ctx.beginPath(); ctx.arc(ix, iy, 24, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(ix, iy); ctx.arc(ix, iy, 24, -Math.PI / 2, Math.PI / 6); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(ix, iy); ctx.lineTo(ix - 21, iy + 12); ctx.stroke(); }
+  if (icon === 'wasiat') { ctx.strokeRect(ix - 17, iy - 24, 34, 46); for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(ix - 10, iy - 12 + k * 11); ctx.lineTo(ix + 10, iy - 12 + k * 11); ctx.stroke(); } }
+  if (icon === 'hibah') { ctx.strokeRect(ix - 22, iy - 8, 44, 32); ctx.strokeRect(ix - 25, iy - 18, 50, 12); ctx.beginPath(); ctx.moveTo(ix, iy - 18); ctx.lineTo(ix, iy + 24); ctx.stroke(); ctx.beginPath(); ctx.ellipse(ix - 9, iy - 25, 9, 6, -0.4, 0, TAU); ctx.ellipse(ix + 9, iy - 25, 9, 6, 0.4, 0, TAU); ctx.stroke(); }
+  ctx.font = '800 32px "Plus Jakarta Sans"'; ctx.fillStyle = GOLD; ctx.fillText(title, x + 122, y + 76);
+  const ls = wrap(desc, '600 26px "Plus Jakarta Sans"', w - 56); ctx.fillStyle = 'rgba(244,236,216,0.92)'; ls.forEach((l, i) => ctx.fillText(l, x + 28, y + 150 + i * 36));
+  ctx.restore(); ctx.globalAlpha = 1;
+}
+
+/* ---------- babak kandungan ---------- */
+function content(t, i) {
+  const s = SC[i], u = t - s.t0, D = s.t1 - s.t0;
+  // nombor + tajuk
+  const vN = vis(u, D, 0.1), vT = vis(u, D, 0.25);
+  ctx.globalAlpha = vN.al; ctx.font = '500 28px "DM Mono"'; ctx.fillStyle = GOLD; ctx.textAlign = 'left'; ctx.fillText(s.n + '  /  06', 120, 210 + vN.dy); ctx.fillRect(120, 226 + vN.dy, 64, 4); ctx.globalAlpha = 1;
+  const tl = wrap(s.title, '800 66px "Plus Jakarta Sans"', 900);
+  ctx.globalAlpha = vT.e; tl.forEach((l, k) => maskText(l, 120, 310 + k * 78 - (1 - vT.e) * 26, '800 66px "Plus Jakarta Sans"', CREAM, out(seg(u, 0.25 + k * 0.12, 0.95 + k * 0.12)), 72)); ctx.globalAlpha = 1;
+  let by = 310 + (tl.length - 1) * 78 + 80;
+  s.pts.forEach((p, k) => {
+    const v = vis(u, D, 0.9 + k * 0.28); if (v.al <= 0.01) return;
+    ctx.globalAlpha = v.al; ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(132, by + k * 60 - 11 + v.dy, 7, 0, TAU); ctx.fill();
+    ctx.font = '600 34px "Plus Jakarta Sans"'; ctx.fillStyle = 'rgba(244,236,216,0.92)'; ctx.fillText(p, 160, by + k * 60 + v.dy); ctx.globalAlpha = 1;
+  });
+  // ilustrasi
+  const vI = vis(u, D, 0.35);
+  if (vI.al > 0.01) {
+    ctx.save(); ctx.globalAlpha = vI.al; const sc = 0.9 + 0.1 * vI.p; ctx.translate(1450, 360 + vI.dy); ctx.scale(sc, sc); ctx.translate(-1450, -360);
+    if (i === 1) { hourglass(u, D, 1300, 400); const vC = vis(u, D, 1.0); ctx.globalAlpha = vI.al * vC.p; ctx.textAlign = 'center'; ctx.font = '800 88px "Plus Jakarta Sans"'; ctx.fillStyle = GOLD; ctx.fillText(Math.round(60 * out(seg(u, 1.0, 2.2))) + (u > 2.2 ? '-70' : ''), 1640, 420); ctx.font = '500 26px "DM Mono"'; ctx.fillStyle = CREAM; ctx.fillText('TAHUN', 1640, 464); ctx.textAlign = 'left'; }
+    if (i === 2) scales(u, 1450, 400);
+    if (i === 3) amanahArt(u, 1450, 390);
+    if (i === 4) mosque(u, 1450, 400);
+    if (i === 5) warnArt(u, 1450, 380);
+    if (i === 6) gates(u, 1450, 400);
+    ctx.restore();
+  }
+  // kad / jubin
+  if (s.card) { const v = vis(u, D, 2.4); card(s.card, 120, 650, W - 240, v.al, v.dy); }
+  if (i === 3) {
+    const T = [['zakat', 'ZAKAT', 'Wajib apabila cukup syarat.'], ['faraid', 'FARAID', 'Pembahagian pusaka selepas kematian.'], ['wasiat', 'WASIAT', 'Dilaksana selepas kematian, had 1/3 harta.'], ['hibah', 'HIBAH', 'Pemberian kepada sesiapa semasa hidup.']];
+    T.forEach((r, k) => { const v = vis(u, D, 2.3 + k * 0.3); tile(120 + k * 427, 660, 400, 250, r[0], r[1], r[2], v.al, v.dy); });
+    const v = vis(u, D, 3.8); ctx.globalAlpha = v.al; ctx.font = '500 22px "DM Mono"'; ctx.fillStyle = GOLD; ctx.textAlign = 'center'; ctx.fillText('FAHAMI HUKUM SETIAP SATU · RUJUK PIHAK BERAUTORITI', CX, 965 + v.dy); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+}
+function intro(t) {
+  const s = SC[0], u = t, D = s.t1;
+  const e = 1 - io(seg(u, D - 0.55, D - 0.05));
+  ctx.globalAlpha = e; star8(CX, 300, 110, out(seg(u, 0.1, 1.6)), 4, GOLD); star8(CX, 300, 70, out(seg(u, 0.4, 1.8)), 2, 'rgba(244,236,216,0.7)');
+  maskText('RINGKASAN KHUTBAH JUMAAT', CX, 500, '500 28px "DM Mono"', GOLD, out(seg(u, 0.5, 1.2)), 32, 'center');
+  maskText('Hakikat Usia, Amanah Harta', CX, 610, '800 80px "Plus Jakarta Sans"', CREAM, out(seg(u, 0.7, 1.5)), 88, 'center');
+  maskText('& Kunci Kejayaan Akhirat', CX, 705, '800 80px "Plus Jakarta Sans"', GOLD, out(seg(u, 0.9, 1.7)), 88, 'center');
+  ctx.globalAlpha = 1;
+}
+function outro(t) {
+  const u = t - SC[7].t0;
+  star8(CX, 230, 70, out(seg(u, 0.1, 1.4)), 3, GOLD);
+  const L = [['Usia singkat.', CREAM], ['Harta amanah.', CREAM], ['Akhirat kekal.', GOLD]];
+  L.forEach((r, k) => maskText(r[0], CX, 420 + k * 120, '800 96px "Plus Jakarta Sans"', r[1], out(seg(u, 0.4 + k * 0.45, 1.2 + k * 0.45)), 104, 'center'));
+  ctx.globalAlpha = out(seg(u, 2.2, 3.0)); ctx.textAlign = 'center'; ctx.font = '500 24px "DM Mono"'; ctx.fillStyle = 'rgba(244,236,216,0.7)';
+  ctx.fillText('WALLAHU A\'LAM · TEKS AYAT PERLU DISEMAK DENGAN MUSHAF', CX, 860); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+}
+function chrome(t) {
+  const a = seg(t, 4.3, 5.0) * (1 - seg(t, 55.2, 55.7)); if (a <= 0) return;
+  ctx.globalAlpha = a; ctx.font = '500 22px "DM Mono"'; ctx.fillStyle = 'rgba(224,180,90,0.85)'; ctx.textAlign = 'left'; ctx.fillText('RINGKASAN KHUTBAH JUMAAT', 120, 96);
+  const i = sceneAt(t); for (let k = 1; k <= 6; k++) { const x = 1190 + (k - 1) * 105, p = k < i ? 1 : k > i ? 0 : seg(t, SC[k].t0, SC[k].t1); ctx.fillStyle = 'rgba(244,236,216,0.18)'; ctx.fillRect(x, 86, 95, 5); ctx.fillStyle = GOLD; ctx.fillRect(x, 86, 95 * p, 5); }
+  ctx.globalAlpha = 1;
+}
+
+window.seek = function (t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.direction = 'ltr';
+  background(t);
+  const i = sceneAt(t);
+  if (i === 0) intro(t); else if (i === 7) outro(t); else content(t, i);
+  chrome(t);
+  const fo = seg(t, TEND - 0.6, TEND); if (fo > 0) { ctx.globalAlpha = fo; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+};
+window.ready = (async () => {
+  await Promise.all(['800 66px "Plus Jakarta Sans"', '600 34px "Plus Jakarta Sans"', '500 24px "DM Mono"', '400 58px Amiri'].map(f => document.fonts.load(f, 'abc إِنَّمَآ')));
+  return true;
+})();
+</script>
