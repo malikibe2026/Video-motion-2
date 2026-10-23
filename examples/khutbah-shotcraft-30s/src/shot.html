@@ -1,0 +1,234 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Khutbah Shotcraft</title>
+<style>
+@font-face{font-family:'Plus Jakarta Sans';font-weight:600;src:url(node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:800;src:url(node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-800-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Mono';font-weight:500;src:url(node_modules/@fontsource/dm-mono/files/dm-mono-latin-500-normal.woff2) format('woff2')}
+html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}
+</style>
+<!-- grain-dissolve: feTurbulence + feDisplacementMap + feGaussianBlur (kad outro/grain-dissolve) -->
+<svg width="0" height="0" style="position:absolute">
+  <filter id="gd" x="-20%" y="-60%" width="140%" height="220%">
+    <feTurbulence id="gdT" type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="1" result="n"/>
+    <feDisplacementMap id="gdD" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G" result="d"/>
+    <feGaussianBlur id="gdB" in="d" stdDeviation="0"/>
+  </filter>
+</svg>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+'use strict';
+const W = 1080, H = 1920, CX = W / 2, FPS = 30, TEND = 30;
+const NAVY = '#0c1f3f', CREAM = '#fbf5e6', GOLD = '#f5c242', INK = '#14284b', TAU = Math.PI * 2;
+const ctx = document.getElementById('c').getContext('2d');
+const cl = x => Math.max(0, Math.min(1, x)), seg = (x, a, b) => cl((x - a) / (b - a));
+const out = x => 1 - Math.pow(1 - x, 3), io = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2, sm = x => x * x * (3 - 2 * x);
+function bez(p1x, p1y, p2x, p2y) { // cubic-bezier easing (seperti CSS)
+  const cx = 3 * p1x, bx = 3 * (p2x - p1x) - cx, ax = 1 - cx - bx, cy = 3 * p1y, by = 3 * (p2y - p1y) - cy, ay = 1 - cy - by;
+  const X = t => ((ax * t + bx) * t + cx) * t, Y = t => ((ay * t + by) * t + cy) * t;
+  return x => { if (x <= 0) return 0; if (x >= 1) return 1; let lo = 0, hi = 1; for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (X(m) < x) lo = m; else hi = m; } return Y((lo + hi) / 2); };
+}
+const RAIL = bez(0.45, 0, 0.18, 1), FLIP = bez(0.55, 0, 0.3, 1);
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+function wrap(text, font, maxW) { ctx.font = font; const ws = text.split(' '), ls = []; let cur = ''; for (const w of ws) { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > maxW && cur) { ls.push(cur); cur = w; } else cur = t; } if (cur) ls.push(cur); return ls; }
+
+const IMG = {};
+const NAMES = ['hourglass', 'quran', 'scales', 'pot', 'zakat', 'faraid', 'wasiat', 'hibah', 'mosque', 'syurga', 'neraka'];
+window.ready = (async () => {
+  await Promise.all(NAMES.map(n => new Promise(r => { const im = new Image(); im.onload = () => { IMG[n] = im; r(); }; im.src = `img/${n}.png`; })));
+  await Promise.all(['800 80px "Plus Jakarta Sans"', '600 40px "Plus Jakarta Sans"', '500 26px "DM Mono"'].map(f => document.fonts.load(f)));
+  return true;
+})();
+
+/* ---------- babak (warna diambil daripada infografik asal) ---------- */
+const SC = [
+  { t0: 0, t1: 3.8, tint: '#1e4f8f' },
+  { t0: 3.8, t1: 7.6, tint: '#2d6fb5', tag: '01 · USIA', title: 'Usia kita singkat', key: 'singkat', sub: 'Purata umur umat 60-70 tahun. Isi dengan amal soleh.', ref: 'HADIS RIWAYAT AT-TIRMIDZI & IBN MAJAH', far: 'hourglass', mid: 'hourglass', chips: ['IMAN', 'SOLAT', 'SUNNAH'] },
+  { t0: 7.6, t1: 11.6, tint: '#3f8a5c', tag: '02 · UJIAN', title: 'Harta dan anak ialah ujian', key: 'ujian', sub: 'Jangan sampai melalaikan kita daripada mengingati Allah.', ref: "AT-TAGHABUN 64:15 · AL-MUNAFIQUN 63:9", far: 'quran', mid: 'scales', chips: ['HARTA', 'ANAK', 'ZIKRULLAH'] },
+  { t0: 11.6, t1: 17.0, tint: '#c98a2b', tag: '03 · AMANAH', title: 'Urus harta sebagai amanah', key: 'amanah', ref: 'FAHAMI HUKUM SETIAP SATU' },
+  { t0: 17.0, t1: 20.6, tint: '#7a5cae', tag: '04 · TELADAN', title: 'Kaya tetapi dermawan', key: 'dermawan', sub: 'Teladan Saidina Uthman bin Affan dan Abdul Rahman bin Auf.', ref: 'HARTA UNTUK KETAATAN', far: 'mosque', mid: 'mosque', chips: ['INFAK', 'SEDEKAH', 'BANTU'] },
+  { t0: 20.6, t1: 24.0, tint: '#a3264a', tag: '05 · ZAKAT', title: 'Jauhi sifat bakhil', key: 'bakhil', sub: 'Harta yang tidak dizakatkan akan membelit pemiliknya pada hari kiamat.', ref: 'MAKSUD HADIS RIWAYAT AL-BUKHARI', far: 'pot', mid: 'pot', chips: ['ZAKAT', 'NAFKAH', 'HAK'] },
+  { t0: 24.0, t1: 27.6, tint: '#2b86b0', tag: '06 · AKHIRAT', title: 'Tahan nafsu, harap rahmat Allah', key: 'rahmat', sub: 'Syurga bagi yang takut kepada Allah dan menahan hawa nafsu.', ref: "AN-NAZI'AT 79:40-41", far: 'syurga', mid: 'gates', chips: ['IKHLAS', 'TAKWA', 'SABAR'] },
+  { t0: 27.6, t1: TEND, tint: '#1e4f8f' },
+];
+function sceneAt(t) { for (let i = SC.length - 1; i >= 0; i--) if (t >= SC[i].t0) return i; return 0; }
+function hexA(h, a) { const n = parseInt(h.slice(1), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; }
+
+function background(t) {
+  ctx.fillStyle = NAVY; ctx.fillRect(0, 0, W, H);
+  const i = sceneAt(t), k = i > 0 ? sm(seg(t, SC[i].t0 - 0.3, SC[i].t0 + 0.5)) : 1;
+  for (const [idx, a] of [[Math.max(0, i - 1), 1 - k], [i, k]]) {
+    if (a <= 0) continue;
+    const g = ctx.createRadialGradient(W * 0.5, H * 0.42, 60, W * 0.5, H * 0.42, H * 0.75);
+    g.addColorStop(0, hexA(SC[idx].tint, 0.55 * a)); g.addColorStop(1, hexA(SC[idx].tint, 0)); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  const R = mulberry32(3); ctx.fillStyle = CREAM;
+  for (let k2 = 0; k2 < 60; k2++) { const x = R() * W, y = ((R() * H - t * (8 + R() * 14)) % H + H) % H; ctx.globalAlpha = 0.06 + 0.14 * R(); ctx.beginPath(); ctx.arc(x, y, 1 + R() * 1.6, 0, TAU); ctx.fill(); }
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- marker-underline-title: 10f, ease-out, kiri rendah kanan tinggi, lebar 0.12em di tengah ---------- */
+function markerUnderline(x0, x1, yBase, em, p, seed) {
+  if (p <= 0) return;
+  const R = mulberry32(seed), N = 40, pts = [];
+  for (let i = 0; i <= N; i++) {
+    const s = i / N, x = x0 - em * 0.04 + (x1 - x0 + em * 0.08) * s, y = yBase + em * 0.1 - s * em * 0.07 + (R() - 0.5) * 1.6;
+    const w = em * 0.12 * (0.6 + 0.4 * Math.sin(Math.PI * s)) * (0.92 + 0.16 * R());
+    pts.push([x, y, w]);
+  }
+  ctx.save(); ctx.beginPath(); ctx.rect(x0 - em * 0.1, yBase - em, (x1 - x0 + em * 0.2) * out(p), em * 2); ctx.clip();
+  ctx.beginPath(); pts.forEach(([x, y, w], i) => i ? ctx.lineTo(x, y - w / 2) : ctx.moveTo(x, y - w / 2));
+  for (let i = pts.length - 1; i >= 0; i--) { const [x, y, w] = pts[i]; ctx.lineTo(x, y + w / 2); }
+  ctx.closePath(); ctx.fillStyle = GOLD; ctx.globalAlpha *= 0.95; ctx.fill(); ctx.restore();
+}
+
+/* ---------- tajuk dengan garis bawah kata kunci ---------- */
+function titleBlock(s, u, D, ex) {
+  const font = '800 82px "Plus Jakarta Sans"', ls = wrap(s.title, font, W - 160), lh = 96, y0 = 400;
+  const a = out(seg(u, 0.1, 0.6)) * ex;
+  ctx.globalAlpha = a; ctx.font = '500 28px "DM Mono"'; ctx.fillStyle = GOLD; ctx.textAlign = 'left'; ctx.fillText(s.tag, 80, 250); ctx.fillRect(80, 268, 64, 4); ctx.globalAlpha = 1;
+  ls.forEach((l, k) => {
+    const p = out(seg(u, 0.15 + k * 0.12, 0.75 + k * 0.12));
+    ctx.save(); ctx.beginPath(); ctx.rect(0, y0 + k * lh - 90, W, 120); ctx.clip(); ctx.globalAlpha = ex;
+    ctx.font = font; ctx.fillStyle = CREAM; ctx.fillText(l, 80, y0 + k * lh + (1 - p) * 110); ctx.restore();
+    const ki = l.indexOf(s.key);
+    if (ki >= 0) { ctx.font = font; const xa = 80 + ctx.measureText(l.slice(0, ki)).width, xb = xa + ctx.measureText(s.key).width; ctx.globalAlpha = ex; markerUnderline(xa, xb, y0 + k * lh, 82, seg(u, 0.95 + 0.15 * k, 0.95 + 0.15 * k + 10 / FPS), 7 + k); ctx.globalAlpha = 1; }
+  });
+  return y0 + (ls.length - 1) * lh;
+}
+
+/* ---------- depth-layer-moves: 3 lapisan 0.35 / 0.7 / 1.4, landasan bezier(.45,0,.18,1) ---------- */
+function drawImg(name, x, y, w, opts) {
+  const im = IMG[name]; const h = w * im.height / im.width;
+  ctx.save(); if (opts && opts.filter) ctx.filter = opts.filter;
+  if (opts && opts.round) { rr(x - w / 2, y - h / 2, w, h, opts.round); ctx.clip(); }
+  ctx.drawImage(im, x - w / 2, y - h / 2, w, h); ctx.restore(); return h;
+}
+function depthScene(s, u, D, ex, cy) {
+  ex *= out(seg(u, 0, 0.45));   // pudar masuk: elak lonjakan pada potongan babak
+  const drive = 1 - RAIL(seg(u, 0, 2.6)), K = 900;
+  const lift = out(seg(u, 2.6 + 8 / FPS, 3.2));
+  // jauh (0.35x, kabur, nyahtepu)
+  ctx.globalAlpha = 0.18 * ex; drawImg(s.far, CX + drive * K * 0.35, cy - 40, 1100, { filter: 'blur(10px) saturate(0.6)' }); ctx.globalAlpha = 1;
+  // tengah (0.7x, bacaan utama, tanpa kabur)
+  ctx.save(); ctx.globalAlpha = ex; const mx = CX + drive * K * 0.7, sc = 1 + 0.035 * lift;
+  ctx.translate(mx, cy); ctx.scale(sc, sc); ctx.translate(-mx, -cy);
+  if (s.mid === 'gates') {
+    for (const [n, dy, lab] of [['syurga', -190, 'SYURGA'], ['neraka', 190, 'JAHIM']]) {
+      const w = 680, h = w * IMG[n].height / IMG[n].width;
+      ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 30 + 30 * lift; ctx.shadowOffsetY = 14; rr(mx - w / 2, cy + dy - h / 2, w, h, 28); ctx.fillStyle = '#fff'; ctx.fill(); ctx.shadowColor = 'transparent'; drawImg(n, mx, cy + dy, w, { round: 28 });
+      ctx.font = '800 30px "Plus Jakarta Sans"'; const tw = ctx.measureText(lab).width; rr(mx - w / 2 + 20, cy + dy - h / 2 + 20, tw + 40, 52, 26); ctx.fillStyle = 'rgba(12,31,63,0.85)'; ctx.fill(); ctx.fillStyle = CREAM; ctx.textAlign = 'left'; ctx.fillText(lab, mx - w / 2 + 40, cy + dy - h / 2 + 57);
+    }
+  } else {
+    const w = 720, im = IMG[s.mid], h = w * im.height / im.width;
+    ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 30 + 30 * lift; ctx.shadowOffsetY = 12 + 12 * lift; rr(mx - w / 2, cy - h / 2, w, h, 32); ctx.fillStyle = '#fff'; ctx.fill(); ctx.shadowColor = 'transparent';
+    drawImg(s.mid, mx, cy, w, { round: 32, filter: s.mid === 'pot' ? `grayscale(${(0.85 * seg(u, 1.2, 2.8)).toFixed(3)})` : '' });
+    if (s.mid === 'pot') { for (let k = 0; k < 2; k++) { const ph = (u * 0.8 + k * 0.5) % 1; ctx.globalAlpha = ex * (1 - ph) * seg(u, 1.4, 2.0); ctx.strokeStyle = '#ff6b8a'; ctx.lineWidth = 6; rr(mx - w / 2 - ph * 50, cy - h / 2 - ph * 50, w + ph * 100, h + ph * 100, 40); ctx.stroke(); } ctx.globalAlpha = ex; }
+    ctx.globalAlpha = ex * lift; ctx.strokeStyle = GOLD; ctx.lineWidth = 5; rr(mx - w / 2, cy - h / 2, w, h, 32); ctx.stroke();
+  }
+  ctx.restore();
+  // dekat (1.4x, kabur ikut kelajuan): cip kata kunci
+  const vel = Math.abs((1 - RAIL(seg(u + 1 / FPS, 0, 2.6))) - drive) * FPS;
+  (s.chips || []).forEach((c, k) => {
+    const x = 140 + k * 300 + drive * K * 1.4, y = cy + (s.mid === 'gates' ? 400 : 330) + (k % 2) * 46;
+    ctx.save(); ctx.globalAlpha = ex; ctx.filter = `blur(${Math.min(7, vel * 3).toFixed(2)}px)`; ctx.font = '800 30px "Plus Jakarta Sans"'; const tw = ctx.measureText(c).width;
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10; rr(x - 26, y - 40, tw + 52, 60, 30); ctx.fillStyle = k === 1 ? GOLD : CREAM; ctx.fill(); ctx.shadowColor = 'transparent';
+    ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(c, x, y + 1); ctx.restore();
+  });
+}
+
+/* ---------- card-flip-reveal: 4f persediaan + 16f flip ke 194° + spring ke 180°, selang 12f ---------- */
+function flipAngle(f) { // f = bingkai sejak mula kad
+  if (f <= 0) return 0;
+  if (f < 4) return -10 * out(f / 4);
+  if (f < 20) return -10 + 204 * FLIP((f - 4) / 16);
+  const tt = (f - 20) / FPS; return 180 + 14 * Math.exp(-tt * 9) * Math.cos(tt * 22);
+}
+const CARDS = [['zakat', 'ZAKAT', 'Wajib apabila cukup syarat'], ['faraid', 'FARAID', 'Pusaka dibahagi selepas kematian'], ['wasiat', 'WASIAT', 'Selepas kematian, had 1/3 harta'], ['hibah', 'HIBAH', 'Pemberian semasa hidup']];
+function flipScene(s, u, D, ex) {
+  // periuk di atas, lapisan jauh
+  ctx.globalAlpha = 0.9 * ex * out(seg(u, 0.2, 0.9)); drawImg('pot', CX, 740, 470, { round: 28 }); ctx.globalAlpha = 1;
+  const cw = 440, ch = 360, gx = 40, x0 = CX - cw - gx / 2, y0 = 990;
+  CARDS.forEach((c, k) => {
+    const fx = x0 + (k % 2) * (cw + gx) + cw / 2, fy = y0 + Math.floor(k / 2) * (ch + gx) + ch / 2;
+    const app = out(seg(u, 0.5 + k * 0.1, 1.1 + k * 0.1)); if (app <= 0) return;
+    const f = (u - 1.6) * FPS - k * 12, th = flipAngle(f) * Math.PI / 180, cs = Math.cos(th);
+    const lz = 1 + 0.06 * Math.sin(Math.PI * cl((flipAngle(f) + 10) / 204));
+    ctx.save(); ctx.globalAlpha = ex * app; ctx.translate(fx, fy + (1 - app) * 60); ctx.scale(Math.max(0.02, Math.abs(cs)) * lz, lz);
+    const front = cs >= 0;
+    ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 14;
+    rr(-cw / 2, -ch / 2, cw, ch, 28); ctx.fillStyle = front ? '#13315f' : CREAM; ctx.fill(); ctx.shadowColor = 'transparent';
+    if (front) {
+      ctx.save(); ctx.beginPath(); ctx.arc(0, -50, 110, 0, TAU); ctx.clip(); drawImg(c[0], 0, -50, 236); ctx.restore();
+      ctx.font = '800 46px "Plus Jakarta Sans"'; ctx.fillStyle = GOLD; ctx.textAlign = 'center'; ctx.fillText(c[1], 0, 130);
+    } else {
+      ctx.textAlign = 'center';
+      ctx.font = '500 28px "DM Mono"'; ctx.fillStyle = '#9a6a12'; ctx.fillText(c[1], 0, -110);
+      const ls = wrap(c[2], '800 44px "Plus Jakarta Sans"', cw - 70); ctx.fillStyle = INK; ls.forEach((l, i) => ctx.fillText(l, 0, -20 + i * 56 - (ls.length - 1) * 20));
+    }
+    //受光: muka digelapkan ikut sudut + jalur cahaya sempit memuncak pada 90°
+    const shade = (1 - Math.abs(cs)) * (front ? 0.55 : 0.4); if (shade > 0) { ctx.globalAlpha = ex * app * shade; rr(-cw / 2, -ch / 2, cw, ch, 28); ctx.fillStyle = '#000'; ctx.fill(); }
+    const deg = flipAngle(f); if (deg > 56 && deg < 124) { const b = 1 - Math.abs(deg - 90) / 34; ctx.globalAlpha = ex * app * b * 0.9; ctx.fillStyle = '#fff'; ctx.fillRect(-cw / 2 + (deg - 56) / 68 * cw - 20, -ch / 2, 40, ch); }
+    ctx.restore();
+  });
+}
+
+/* ---------- pembuka: sapuan lampu sorot (spotlight-sweep) ---------- */
+const TL = document.createElement('canvas'); TL.width = W; TL.height = H; const tg = TL.getContext('2d');
+function opening(t) {
+  const lines = [['PERINGATAN KHUTBAH JUMAAT', '500 32px "DM Mono"', GOLD, 640], ['Hakikat Usia,', '800 104px "Plus Jakarta Sans"', CREAM, 800], ['Amanah Harta', '800 104px "Plus Jakarta Sans"', CREAM, 920], ['& Kunci Kejayaan', '800 104px "Plus Jakarta Sans"', GOLD, 1040], ['Akhirat', '800 104px "Plus Jakarta Sans"', GOLD, 1160]];
+  const ex = 1 - io(seg(t, 3.35, 3.75));
+  tg.setTransform(1, 0, 0, 1, 0, 0); tg.clearRect(0, 0, W, H); tg.textAlign = 'center';
+  lines.forEach(([s, f, c, y]) => { tg.font = f; tg.fillStyle = c; tg.fillText(s, CX, y); });
+  // versi malap
+  ctx.globalAlpha = 0.1 * ex; ctx.drawImage(TL, 0, 0); ctx.globalAlpha = 1;
+  // lampu sorot bergerak kiri ke kanan, kemudian mengembang memenuhi skrin
+  const sx = -250 + (W + 500) * io(seg(t, 0.3, 2.2)), sy = 900, rad = 330 + 1400 * io(seg(t, 2.1, 3.0));
+  tg.globalCompositeOperation = 'destination-in'; const g = tg.createRadialGradient(sx, sy, 0, sx, sy, rad); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.65, 'rgba(0,0,0,0.9)'); g.addColorStop(1, 'rgba(0,0,0,0)'); tg.fillStyle = g; tg.fillRect(0, 0, W, H); tg.globalCompositeOperation = 'source-over';
+  const cone = ctx.createRadialGradient(sx, sy, 0, sx, sy, rad * 1.1); cone.addColorStop(0, `rgba(255,214,150,${(0.16 * ex).toFixed(3)})`); cone.addColorStop(1, 'rgba(255,214,150,0)'); ctx.fillStyle = cone; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = ex; ctx.drawImage(TL, 0, 0); ctx.globalAlpha = 1;
+}
+
+/* ---------- penutup: grain-dissolve ---------- */
+const GD = { T: document.getElementById('gdT'), D: document.getElementById('gdD'), B: document.getElementById('gdB') };
+function outro(t) {
+  const u = t - SC[7].t0, q = cl(u / 2.0);           // kad: 60f
+  const burst = out(seg(q, 0.13, 0.28)), lock = io(seg(q, 0.68, 0.90)), cross = io(seg(q, 0.60, 0.71));
+  const amp = burst * (1 - lock);
+  GD.T.setAttribute('baseFrequency', (0.9 + 0.4 * burst).toFixed(3)); GD.T.setAttribute('seed', String(Math.floor(u * 46)));
+  GD.D.setAttribute('scale', (52 * amp).toFixed(2)); GD.B.setAttribute('stdDeviation', (1.1 * amp).toFixed(2));
+  const glow = 0.3 * burst + 0.7 * seg(q, 0.62, 0.75) - 0.45 * seg(q, 0.88, 1.0);
+  const app = out(seg(u, 0, 0.25));
+  ctx.save(); ctx.filter = 'url(#gd)'; ctx.textAlign = 'center';
+  ctx.globalAlpha = app * (1 - cross); ctx.font = '800 64px "Plus Jakarta Sans"'; ctx.fillStyle = CREAM; ctx.fillText('{ Usia singkat. Harta amanah. }', CX, 980);
+  ctx.globalAlpha = cross; ctx.shadowColor = `rgba(255,240,200,${cl(glow).toFixed(3)})`; ctx.shadowBlur = 40; ctx.font = '800 128px "Plus Jakarta Sans"'; ctx.fillStyle = GOLD; ctx.fillText('Akhirat kekal.', CX, 1010);
+  ctx.restore();
+  // bingkai pilihan berjalur (muncul bersama burst, keluar 0.55-0.64)
+  const fa = burst * (1 - seg(q, 0.55, 0.64)); if (fa > 0) { ctx.save(); ctx.globalAlpha = fa * 0.8; const bw = 980, bh = 150, bx = CX - bw / 2, by = 900; ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip(); ctx.strokeStyle = 'rgba(245,194,66,0.35)'; ctx.lineWidth = 2; for (let x = bx - bh; x < bx + bw; x += 18) { ctx.beginPath(); ctx.moveTo(x, by + bh); ctx.lineTo(x + bh, by); ctx.stroke(); } ctx.restore(); ctx.globalAlpha = fa; ctx.strokeStyle = GOLD; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bw, bh); for (const [hx, hy] of [[bx, by], [bx + bw, by], [bx, by + bh], [bx + bw, by + bh]]) { ctx.fillStyle = GOLD; ctx.fillRect(hx - 8, hy - 8, 16, 16); } ctx.globalAlpha = 1; }
+  const na = out(seg(u, 1.6, 2.1)); ctx.globalAlpha = na; ctx.textAlign = 'center'; ctx.font = '500 26px "DM Mono"'; ctx.fillStyle = 'rgba(251,245,230,0.7)'; ctx.fillText("WALLAHU A'LAM", CX, 1180); ctx.fillText('ILUSTRASI: INFOGRAFIK ASAL', CX, 1222); ctx.globalAlpha = 1; ctx.textAlign = 'left';
+}
+
+/* ---------- babak kandungan ---------- */
+function content(t, i) {
+  const s = SC[i], u = t - s.t0, D = s.t1 - s.t0, ex = 1 - io(seg(u, D - 0.4, D - 0.02));
+  const ty = titleBlock(s, u, D, ex);
+  if (i === 3) flipScene(s, u, D, ex); else depthScene(s, u, D, ex, ty + 520);
+  if (s.sub) { const a = out(seg(u, 1.3, 1.9)) * ex, ls = wrap(s.sub, '600 40px "Plus Jakarta Sans"', W - 160); ctx.globalAlpha = a; ctx.font = '600 40px "Plus Jakarta Sans"'; ctx.fillStyle = 'rgba(251,245,230,0.94)'; ctx.textAlign = 'left'; ls.forEach((l, k) => ctx.fillText(l, 80, 1540 + k * 54 + (1 - a) * 20)); ctx.globalAlpha = 1; }
+  const ra = out(seg(u, 1.6, 2.2)) * ex; ctx.globalAlpha = ra; ctx.font = '500 26px "DM Mono"'; ctx.fillStyle = GOLD; ctx.textAlign = i === 3 ? 'center' : 'left'; ctx.fillText(s.ref, i === 3 ? CX : 80, i === 3 ? 1820 : 1700); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+}
+function chrome(t) {
+  const a = seg(t, 3.6, 4.2) * (1 - seg(t, 27.4, 27.8)); if (a <= 0) return;
+  const i = sceneAt(t); ctx.globalAlpha = a;
+  for (let k = 1; k <= 6; k++) { const x = 80 + (k - 1) * 158, p = k < i ? 1 : k > i ? 0 : seg(t, SC[k].t0, SC[k].t1); ctx.fillStyle = 'rgba(251,245,230,0.2)'; ctx.fillRect(x, 140, 146, 6); ctx.fillStyle = GOLD; ctx.fillRect(x, 140, 146 * p, 6); }
+  ctx.globalAlpha = 1;
+}
+window.seek = function (t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.filter = 'none'; ctx.textAlign = 'left'; ctx.shadowColor = 'transparent';
+  background(t);
+  const i = sceneAt(t);
+  if (i === 0) opening(t); else if (i === 7) outro(t); else content(t, i);
+  chrome(t);
+  const fo = seg(t, TEND - 0.4, TEND); if (fo > 0) { ctx.globalAlpha = fo; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+};
+</script>

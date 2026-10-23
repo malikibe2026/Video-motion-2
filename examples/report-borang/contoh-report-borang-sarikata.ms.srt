@@ -1,0 +1,27 @@
+1
+00:00:00,300 --> 00:00:02,800
+Laporan BE2026, Unit Harga-Harga.
+
+2
+00:00:02,950 --> 00:00:04,600
+KPI utama sekali pandang.
+
+3
+00:00:04,700 --> 00:00:06,300
+Tapis ikut fasa dan survei.
+
+4
+00:00:06,500 --> 00:00:09,000
+Komposisi respon dalam carta.
+
+5
+00:00:09,500 --> 00:00:12,000
+Ringkasan setiap daerah.
+
+6
+00:00:12,300 --> 00:00:14,200
+Prestasi mengikut penyelia.
+
+7
+00:00:14,900 --> 00:00:16,000
+Ini data demo.
