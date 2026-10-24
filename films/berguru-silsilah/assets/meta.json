@@ -1,0 +1,77 @@
+{
+ "book": {
+  "w": 780,
+  "h": 705,
+  "edge": "#fefefc"
+ },
+ "compass": {
+  "w": 385,
+  "h": 448,
+  "edge": "#bca77a"
+ },
+ "darkman": {
+  "w": 518,
+  "h": 612,
+  "edge": "#fefefa"
+ },
+ "dreamer": {
+  "w": 600,
+  "h": 482,
+  "edge": "#fdfefa"
+ },
+ "guide": {
+  "w": 448,
+  "h": 825,
+  "edge": "#fefefa"
+ },
+ "heart": {
+  "w": 300,
+  "h": 275,
+  "edge": "#445d41"
+ },
+ "king": {
+  "w": 500,
+  "h": 618,
+  "edge": "#fffffb"
+ },
+ "lantern": {
+  "w": 482,
+  "h": 670,
+  "edge": "#727e4e"
+ },
+ "magic": {
+  "w": 1048,
+  "h": 482,
+  "edge": "#fefefa"
+ },
+ "magician": {
+  "w": 462,
+  "h": 482,
+  "edge": "#fdfef9"
+ },
+ "phone": {
+  "w": 445,
+  "h": 802,
+  "edge": "#fefefb"
+ },
+ "pillars": {
+  "w": 275,
+  "h": 660,
+  "edge": "#0d4135"
+ },
+ "pray": {
+  "w": 602,
+  "h": 912,
+  "edge": "#fdf2d0"
+ },
+ "scholars": {
+  "w": 860,
+  "h": 758,
+  "edge": "#0d4136"
+ },
+ "warn": {
+  "w": 480,
+  "h": 402,
+  "edge": "#fbf9e9"
+ }
+}

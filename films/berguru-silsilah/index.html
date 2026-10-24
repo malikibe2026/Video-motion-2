@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>Kepentingan Berguru & Silsilah</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+:root{
+  --cream:#fbf9f1; --cream2:#f4efe0; --ink:#173a31; --body:#33463f;
+  --green:#0b4538; --green2:#07342a; --green3:#052a21;
+  --gold:#c9a45c; --gold2:#e7cd8c; --gold3:#a8803a; --red:#b0383a;
+  --serif:'DM Serif Display',Georgia,serif; --sans:'Plus Jakarta Sans',system-ui,sans-serif; --ar:'Amiri',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#000}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:var(--cream);font-family:var(--sans);color:var(--ink)}
+.abs{position:absolute}
+.layer{position:absolute;inset:0}
+.hid{visibility:hidden}
+/* backgrounds */
+#bgCream{background:radial-gradient(ellipse 90% 60% at 50% 38%,#fffdf7 0%,var(--cream) 55%,var(--cream2) 100%)}
+#bgGreen{background:radial-gradient(ellipse 90% 60% at 50% 36%,#0f5444 0%,var(--green) 45%,var(--green3) 100%)}
+.pattern{position:absolute;left:-120px;top:-120px;width:1320px;height:2160px}
+/* corners */
+.corner{position:absolute;top:0;width:330px;height:250px;z-index:30}
+/* header pill */
+.hdr{position:absolute;left:50%;top:176px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:22px;
+  padding:22px 40px 22px 26px;border-radius:999px;background:linear-gradient(180deg,#0e5141,#093c31);
+  box-shadow:0 0 0 3px var(--gold),0 0 0 9px rgba(201,164,92,.22),0 18px 40px rgba(7,52,42,.28);white-space:nowrap}
+.hdr .ht{font:700 38px/1.18 var(--sans);color:#fff;letter-spacing:-.2px}
+.hdr .ht small{display:block;font:600 22px/1.3 var(--sans);color:var(--gold2);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:4px}
+.hdr svg{flex:none}
+/* medallions */
+.med{position:absolute;border-radius:50%;overflow:hidden;z-index:10;
+  box-shadow:0 0 0 7px var(--gold),0 0 0 17px rgba(201,164,92,.20),0 26px 60px rgba(20,40,30,.22)}
+.med img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  -webkit-mask-image:radial-gradient(closest-side,#000 74%,transparent 99%);mask-image:radial-gradient(closest-side,#000 74%,transparent 99%)}
+.frame{position:absolute;overflow:hidden;z-index:10;border-radius:56px;
+  box-shadow:0 0 0 7px var(--gold),0 0 0 17px rgba(201,164,92,.20),0 26px 60px rgba(20,40,30,.22)}
+.frame img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  -webkit-mask-image:radial-gradient(ellipse 52% 54% at 50% 50%,#000 80%,transparent 100%);mask-image:radial-gradient(ellipse 52% 54% at 50% 50%,#000 80%,transparent 100%)}
+/* text cards */
+.card{position:absolute;left:70px;width:940px;text-align:center;z-index:15}
+.chip{display:inline-block;font:800 24px/1 var(--sans);letter-spacing:3px;color:var(--gold3);border:2px solid var(--gold);border-radius:999px;padding:9px 18px 8px;margin-bottom:22px;background:rgba(255,255,255,.6)}
+.ttl{font:400 60px/1.12 var(--serif);color:var(--ink);letter-spacing:-.3px}
+.body{font:500 36px/1.5 var(--sans);color:var(--body);margin-top:22px}
+.g .ttl{color:var(--gold2)} .g .body{color:#e9efe9} .g .chip{background:rgba(0,0,0,.15);color:var(--gold2)}
+.hl{position:relative;white-space:nowrap;font-weight:700;color:var(--ink)}
+.g .hl{color:#fff}
+.hl i{position:absolute;left:-4px;right:-4px;bottom:2px;height:14px;background:rgba(201,164,92,.45);border-radius:6px;transform-origin:left center;z-index:-1}
+/* masked rising words */
+.rise .w{display:inline-block;overflow:hidden;vertical-align:top;padding:0 .02em .12em;margin-bottom:-.12em}
+.rise .w>span{display:inline-block;will-change:transform}
+/* stamp */
+.stamp{position:absolute;z-index:25;font:800 46px/1 var(--sans);letter-spacing:3px;color:var(--red);border:6px solid var(--red);border-radius:16px;padding:16px 26px 14px;background:rgba(255,252,246,.92);white-space:nowrap;box-shadow:0 10px 30px rgba(120,20,20,.18)}
+.tag{position:absolute;z-index:25;left:50%;font:600 30px/1.35 var(--sans);color:var(--ink);background:#fffaf0;border:2.5px solid var(--gold);border-radius:22px;padding:18px 28px;text-align:center;box-shadow:0 14px 34px rgba(60,40,10,.14);width:820px;margin-left:-410px}
+.tag b{color:var(--gold3)}
+/* subtitles */
+#subs{position:absolute;left:0;right:0;top:1452px;z-index:50;display:flex;justify-content:center}
+#subs .box{max-width:900px;padding:14px 28px 15px;border-radius:20px;background:rgba(6,38,30,.86);box-shadow:0 0 0 1.5px rgba(201,164,92,.55),0 10px 26px rgba(0,0,0,.18);
+  font:600 34px/1.38 var(--sans);color:rgba(255,255,255,.5);text-align:center}
+#subs .box span.on{color:#fff}
+#subs .box span.now{color:var(--gold2)}
+/* section dots */
+#dots{position:absolute;left:50%;top:1600px;transform:translateX(-50%);display:flex;gap:16px;z-index:40}
+#dots i{display:block;width:14px;height:14px;border-radius:7px;background:rgba(201,164,92,.35)}
+/* misc */
+.serifbig{font:400 112px/1 var(--serif);text-align:center;background:linear-gradient(180deg,#f6e2a8 0%,#d8b46a 55%,#b48a3e 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.goldtxt,.goldtxt .w>span{background:linear-gradient(180deg,#dcbd77 0%,#c39a4c 60%,#a47a33 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.serifbig .w>span{background:linear-gradient(180deg,#f6e2a8 0%,#d8b46a 55%,#b48a3e 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lbl{position:absolute;z-index:22;font:700 32px/1.2 var(--sans);color:#fff;background:rgba(5,42,33,.9);border:2.5px solid var(--gold);border-radius:999px;padding:14px 26px;white-space:nowrap;text-align:center}
+.lbl small{display:block;font:500 24px/1.2 var(--sans);color:var(--gold2);margin-top:4px}
+.node{position:absolute;z-index:14;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fbe7ad,#d2aa5c 60%,#9c7430);box-shadow:0 0 0 5px rgba(5,42,33,.9),0 0 0 8px var(--gold)}
+.nlab{position:absolute;z-index:14;font:700 34px/1 var(--sans);color:#fff;white-space:nowrap;transform:translateY(-50%)}
+.nlab small{font:500 24px var(--sans);color:var(--gold2);margin-left:10px}
+.close-line{position:absolute;left:60px;width:960px;text-align:center;z-index:15}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bgCream" class="layer"></div>
+  <svg id="patCream" class="pattern" viewBox="0 0 1320 2160"></svg>
+  <div id="bgGreen" class="layer"><svg id="patGreen" class="pattern" viewBox="0 0 1320 2160"></svg></div>
+
+  <svg id="cornerL" class="corner" style="left:0" viewBox="0 0 330 250"></svg>
+  <svg id="cornerR" class="corner" style="right:0;transform:scaleX(-1)" viewBox="0 0 330 250"></svg>
+
+  <!-- ===== INTRO ===== -->
+  <svg id="hookPhone" class="abs" style="left:380px;top:330px;z-index:10" width="320" height="560" viewBox="0 0 320 560">
+    <defs><clipPath id="scr"><rect x="22" y="58" width="276" height="440" rx="18"/></clipPath>
+      <radialGradient id="phGlow" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#fff6dc"/><stop offset="1" stop-color="#f3e7c4"/></radialGradient></defs>
+    <rect x="4" y="4" width="312" height="552" rx="46" fill="#123f34" stroke="#c9a45c" stroke-width="6"/>
+    <rect x="22" y="58" width="276" height="440" rx="18" fill="url(#phGlow)"/>
+    <g clip-path="url(#scr)"><g id="feed"></g></g>
+    <rect x="120" y="24" width="80" height="14" rx="7" fill="#c9a45c" opacity=".7"/>
+    <circle cx="160" cy="526" r="13" fill="none" stroke="#c9a45c" stroke-width="4"/>
+  </svg>
+  <div id="qBadge" class="abs" style="left:640px;top:300px;width:150px;height:150px;border-radius:75px;background:#fffaf0;box-shadow:0 0 0 6px var(--gold),0 18px 40px rgba(0,0,0,.18);z-index:12;font:400 112px/150px var(--serif);text-align:center;color:var(--green)">?</div>
+  <div id="hook1" class="card rise" style="top:960px"><div class="ttl" style="font-size:76px">Ilmu agama di <span class="goldtxt">hujung jari.</span></div></div>
+  <div id="hook2" class="card" style="top:930px"><div class="ttl rise" style="font-size:66px">Tapi… adakah semua yang kita baca membawa ke <span class="goldtxt">jalan yang lurus?</span></div></div>
+
+  <div id="title" class="card" style="top:560px">
+    <svg id="orn1" width="520" height="40" viewBox="0 0 520 40" style="display:block;margin:0 auto 34px"><path id="ornPath" d="M10 20 H215 M305 20 H510" stroke="#c9a45c" stroke-width="3" fill="none" stroke-linecap="round"/><g transform="translate(260 20)"><path d="M0-17 L5-5 L17 0 L5 5 L0 17 L-5 5 L-17 0 L-5-5Z" fill="#c9a45c"/><circle r="5" fill="#fbf9f1"/></g></svg>
+    <div class="ttl rise goldtxt" id="t1" style="font-size:98px;line-height:1.08">Kepentingan Berguru &amp; Silsilah:</div>
+    <div class="ttl rise" id="t2" style="font-size:70px;margin-top:26px">Memelihara Iktikad di Akhir Zaman</div>
+    <div id="t3" style="font:600 28px/1 var(--sans);letter-spacing:6px;color:var(--gold3);margin-top:44px">PENJELASAN INFOGRAFIK</div>
+  </div>
+
+  <!-- ===== SECTION 1 ===== -->
+  <div id="hdr1" class="hdr">
+    <svg width="78" height="70" viewBox="0 0 78 70"><path d="M39 4 L75 66 H3 Z" fill="#e2c178" stroke="#7a5a22" stroke-width="4" stroke-linejoin="round"/><rect x="35" y="24" width="8" height="24" rx="4" fill="#3b2a10"/><circle cx="39" cy="56" r="4.6" fill="#3b2a10"/></svg>
+    <div class="ht"><small>Bahagian 1</small>Bahaya Belajar Tanpa Guru<br>&amp; Fitnah Media Sosial</div>
+  </div>
+  <div id="medBook" class="med" style="left:250px;top:370px;width:580px;height:580px;background:#fefefc"><img src="assets/book@2x.png" style="width:610px"></div>
+  <div id="qs" class="abs" style="left:0;top:0;z-index:12"></div>
+  <div id="card1" class="card" style="top:1010px"><div class="chip">01</div><div class="ttl">Bahaya “Jahil Murakkab” &amp; Tafsiran Sendiri</div>
+    <div class="body">Membaca kitab atau internet tanpa guru arif mengundang salah faham terhadap ayat <span class="hl" id="hlMut"><i></i>mutasyabihat</span>.</div></div>
+  <div id="tagJahil" class="tag" style="top:850px"><b>Jahil murakkab</b> = jahil, tetapi tidak sedar dirinya jahil.</div>
+
+  <div id="medPhone" class="med" style="left:250px;top:370px;width:580px;height:580px;background:#fefefb"><img src="assets/phone@2x.png" style="width:300px"></div>
+  <div id="reacts" class="abs" style="left:0;top:0;z-index:12"></div>
+  <div id="card2" class="card" style="top:1010px"><div class="chip">02</div><div class="ttl">Waspada Fitnah TikTok &amp; Facebook</div>
+    <div class="body">Media sosial bukan medan sahih belajar agama. Elakkan terpedaya dengan “Mufti Plastik” tanpa silsilah.</div></div>
+  <div id="stMufti" class="stamp" style="left:560px;top:760px">MUFTI PLASTIK?</div>
+
+  <div id="frMagic" class="frame" style="left:100px;top:440px;width:880px;height:440px;background:#fefefa"><img src="assets/magic@2x.png" style="width:900px"></div>
+  <div id="sparks" class="abs" style="left:0;top:0;z-index:12"></div>
+  <div id="card3" class="card" style="top:1010px"><div class="chip">03</div><div class="ttl">Kepalsuan di Alam Maya</div>
+    <div class="body">Ramai mendakwa mendapat arahan mimpi atau kehebatan “magic” yang sebenarnya adalah tipu daya.</div></div>
+  <div id="stTipu" class="stamp" style="left:610px;top:800px">TIPU DAYA</div>
+
+  <!-- ===== SECTION 2 ===== -->
+  <div id="hdr2" class="hdr">
+    <svg width="70" height="70" viewBox="0 0 70 70"><g fill="none" stroke="#e2c178" stroke-width="6"><rect x="6" y="20" width="34" height="22" rx="11"/><rect x="30" y="28" width="34" height="22" rx="11"/></g></svg>
+    <div class="ht"><small>Bahagian 2</small>Guru Bersilsilah<br>&amp; Kurnia Nur Nubuwah</div>
+  </div>
+  <div id="jalan" class="card g" style="top:560px"><div style="font:600 30px/1 var(--sans);letter-spacing:5px;color:var(--gold2)">JADI,</div><div class="serifbig rise" style="font-size:104px;margin-top:22px;line-height:1.1">Apa jalan keluarnya?</div></div>
+  <svg id="scroll" class="abs" style="left:110px;top:355px;z-index:16" width="860" height="150" viewBox="0 0 860 150">
+    <defs><linearGradient id="parch" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8e9c6"/><stop offset="1" stop-color="#e9d2a0"/></linearGradient>
+      <linearGradient id="rod" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b98f45"/><stop offset=".5" stop-color="#f1d89a"/><stop offset="1" stop-color="#9c7430"/></linearGradient>
+      <clipPath id="scrollClip"><rect id="scrollRect" x="40" y="10" width="780" height="130"/></clipPath></defs>
+    <g clip-path="url(#scrollClip)">
+      <rect x="40" y="18" width="780" height="114" fill="url(#parch)" stroke="#b48a3e" stroke-width="3"/>
+      <text x="430" y="66" text-anchor="middle" style="font:700 36px var(--sans)" fill="#3b2a10">Silsilah: Rantaian Ilmu</text>
+      <text x="430" y="110" text-anchor="middle" style="font:700 36px var(--sans)" fill="#3b2a10">ke Rasulullah SAW</text>
+    </g>
+    <g id="rodL"><rect x="22" y="4" width="36" height="142" rx="18" fill="url(#rod)"/></g>
+    <g id="rodR"><rect x="802" y="4" width="36" height="142" rx="18" fill="url(#rod)"/></g>
+  </svg>
+  <svg id="chainSvg" class="abs" style="left:0;top:0;z-index:13" width="1080" height="1200" viewBox="0 0 1080 1200"></svg>
+  <div id="nodes" class="abs" style="left:0;top:0"></div>
+  <div id="medScholars" class="med" style="left:240px;top:370px;width:600px;height:600px;background:#0d4136"><img src="assets/scholars@2x.png" style="width:700px"></div>
+  <div id="card4" class="card g" style="top:1040px"><div class="ttl">Pewaris Nabi</div>
+    <div class="body">Guru yang sah adalah pewaris Nabi yang menerima ilmu melalui rantaian guru yang <span class="hl" id="hlPutus"><i></i>tidak putus</span>.</div></div>
+
+  <svg id="rays" class="abs" style="left:140px;top:240px;z-index:9" width="800" height="800" viewBox="-400 -400 800 800"></svg>
+  <div id="medLantern" class="med" style="left:310px;top:380px;width:460px;height:460px;background:radial-gradient(circle,#5f6d40 0%,#264f3c 60%,#0d4136 100%)"><img src="assets/lantern@2x.png" style="width:440px"></div>
+  <div id="nurT" class="card" style="top:920px"><div class="serifbig rise">Nur Nubuwah</div>
+    <div id="nurSub" style="font:400 italic 50px/1.2 var(--serif);color:#f3ead2;margin-top:10px">Cahaya Kenabian</div></div>
+  <div id="card5" class="card g" style="top:1130px"><div class="body" style="margin-top:0"><b style="color:var(--gold2)">Bukan anugerah duniawi.</b> Ia kurniaan Allah dalam hati guru bersilsilah, bukan pangkat yang diberi manusia.</div></div>
+
+  <div id="medPillars" class="med" style="left:120px;top:400px;width:470px;height:470px;background:#0d4135"><img src="assets/pillars@2x.png" style="width:200px"></div>
+  <svg id="arrow" class="abs" style="left:560px;top:520px;z-index:12" width="220" height="200" viewBox="0 0 220 200"><path id="arrowPath" d="M20 150 C 80 40, 140 40, 196 92" fill="none" stroke="#e2c178" stroke-width="10" stroke-linecap="round"/><path id="arrowHead" d="M168 70 L204 98 L162 112" fill="none" stroke="#e2c178" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <svg id="heart" class="abs" style="left:740px;top:520px;z-index:12" width="250" height="230" viewBox="-125 -115 250 230">
+    <defs><radialGradient id="hg" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff2c4"/><stop offset=".5" stop-color="#e3be68"/><stop offset="1" stop-color="#a77d32"/></radialGradient></defs>
+    <circle id="heartGlow" r="110" fill="#f6dc95" opacity=".25"/>
+    <path d="M0 80 C -40 50, -95 15, -95 -30 C -95 -65, -65 -88, -38 -88 C -18 -88, -5 -76, 0 -62 C 5 -76, 18 -88, 38 -88 C 65 -88, 95 -65, 95 -30 C 95 15, 40 50, 0 80 Z" fill="url(#hg)" stroke="#8b6526" stroke-width="5"/>
+  </svg>
+  <div id="lblSy" class="lbl" style="left:110px;top:900px">Syariat<small>Zahir</small></div>
+  <div id="lblTa" class="lbl" style="left:690px;top:900px">Tarekat<small>Batin</small></div>
+  <div id="card6" class="card g" style="top:1090px"><div class="ttl" style="font-size:54px">Peranan Syariat &amp; Tarekat</div>
+    <div class="body">Guru yang benar menggabungkan zahir dan batin untuk <span class="hl" id="hlHati"><i></i>membersihkan hati</span> murid.</div></div>
+
+  <!-- ===== SECTION 3 ===== -->
+  <div id="hdr3" class="hdr">
+    <svg width="70" height="70" viewBox="-35 -35 70 70"><circle r="29" fill="#fbf3dc" stroke="#e2c178" stroke-width="6"/><path d="M0-22 L7 0 L0 22 L-7 0Z" fill="#c9503e"/><path d="M0 0 L7 0 L0 22 L-7 0Z" fill="#3c7fb0"/></svg>
+    <div class="ht"><small>Bahagian 3</small>Keikhlasan: Kunci<br>Menemui Jalan Lurus</div>
+  </div>
+  <svg id="compass" class="abs" style="left:310px;top:410px;z-index:12;transform-origin:230px 230px" width="460" height="460" viewBox="-230 -230 460 460">
+    <defs><radialGradient id="cf" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#fffdf4"/><stop offset="1" stop-color="#efe3c4"/></radialGradient>
+      <linearGradient id="cr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3dc9e"/><stop offset=".5" stop-color="#c9a45c"/><stop offset="1" stop-color="#94692a"/></linearGradient></defs>
+    <circle id="cGlow" r="228" fill="#f7dd94" opacity="0"/>
+    <circle r="200" fill="url(#cr)"/><circle r="178" fill="url(#cf)" stroke="#a8803a" stroke-width="3"/>
+    <g id="ticks"></g>
+    <text y="-128" text-anchor="middle" style="font:700 34px var(--sans)" fill="#173a31">U</text>
+    <g id="needle"><path d="M0 -150 L20 0 L0 18 L-20 0 Z" fill="#c9503e"/><path d="M0 150 L20 0 L0 -18 L-20 0 Z" fill="#3c7fb0"/><circle r="14" fill="#c9a45c" stroke="#7a5a22" stroke-width="4"/></g>
+  </svg>
+  <div id="kunci" class="card" style="top:960px"><div style="font:600 30px/1 var(--sans);letter-spacing:5px;color:var(--gold3)">KUNCINYA</div><div class="serifbig rise" style="font-size:118px;margin-top:18px">Keikhlasan</div></div>
+  <div id="arab" class="card" style="top:610px"><div style="font:700 104px/1.5 var(--ar);color:var(--ink);direction:rtl">اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ</div></div>
+  <div id="translit" class="card" style="top:800px"><div class="goldtxt" style="font:400 italic 66px/1.2 var(--serif)">“Ihdinas Siratal Mustaqim”</div></div>
+  <div id="transl" class="card" style="top:900px"><div style="font:600 34px/1.4 var(--sans);color:var(--body)">Tunjukilah kami jalan yang lurus.<br><span style="font-weight:500;font-size:26px;color:var(--gold3);letter-spacing:2px">AL-FATIHAH : 6</span></div></div>
+  <div id="card7" class="card" style="top:1100px"><div class="body" style="margin-top:0">Doa memohon petunjuk memerlukan keikhlasan hati yang <span class="hl" id="hlCari"><i></i>benar-benar mencari Allah</span> tanpa kepentingan dunia.</div></div>
+
+  <svg id="pathGold" class="abs" style="left:0;top:0;z-index:9" width="1080" height="1100" viewBox="0 0 1080 1100"><path id="pg" d="M290 900 C 420 990, 640 990, 790 880" fill="none" stroke="#d9b468" stroke-width="16" stroke-linecap="round" stroke-dasharray="2 30"/></svg>
+  <div id="medPray" class="med" style="left:70px;top:420px;width:440px;height:440px;background:#fdf2d0"><img src="assets/pray@2x.png" style="width:440px"></div>
+  <div id="medGuide" class="med" style="left:570px;top:420px;width:440px;height:440px;background:#fefefa"><img src="assets/guide@2x.png" style="width:300px"></div>
+  <div id="card8" class="card" style="top:1030px"><div class="ttl" style="font-size:56px">Jaminan Allah bagi yang Ikhlas</div>
+    <div class="body">Sesiapa yang bersungguh-sungguh mencari kebenaran pasti akan dipertemukan dengan <span class="hl" id="hlMur"><i></i>guru yang mursyid</span>.</div></div>
+
+  <div id="medDark" class="med" style="left:70px;top:420px;width:440px;height:440px;background:#fefefa;box-shadow:0 0 0 7px #8a8f8c,0 0 0 17px rgba(120,120,120,.2),0 26px 60px rgba(20,20,20,.25)"><img src="assets/darkman@2x.png" style="width:400px"></div>
+  <div id="medKing" class="med" style="left:570px;top:420px;width:440px;height:440px;background:#fffffb"><img src="assets/king@2x.png" style="width:380px"></div>
+  <div id="vs" class="abs" style="left:490px;top:590px;width:100px;height:100px;border-radius:50px;background:var(--green);color:var(--gold2);font:800 34px/100px var(--sans);text-align:center;z-index:14;box-shadow:0 0 0 4px var(--gold)">VS</div>
+  <div id="card9" class="card" style="top:1030px"><div class="ttl" style="font-size:56px">Ikhlas vs Kepentingan Nafsu</div>
+    <div class="body">Niat yang salah akan membawa seseorang kepada guru palsu yang menunjuk-nunjuk kehebatan.</div></div>
+  <div id="stPalsu" class="stamp" style="left:610px;top:780px">GURU PALSU</div>
+
+  <!-- ===== CLOSING ===== -->
+  <div id="medEnd" class="med" style="left:390px;top:330px;width:300px;height:300px;background:radial-gradient(circle,#5f6d40 0%,#264f3c 60%,#0d4136 100%)"><img src="assets/lantern@2x.png" style="width:290px"></div>
+  <div id="c1" class="close-line" style="top:700px"><div class="ttl" style="font-size:72px">Betulkan niat.</div></div>
+  <div id="c2" class="close-line" style="top:810px"><div class="ttl" style="font-size:72px">Carilah guru yang <span class="goldtxt">bersilsilah.</span></div></div>
+  <div id="c3" class="close-line" style="top:1010px"><svg width="300" height="30" viewBox="0 0 300 30" style="display:block;margin:0 auto 26px"><path d="M10 15 H120 M180 15 H290" stroke="#c9a45c" stroke-width="3" stroke-linecap="round"/><path d="M150 3 L156 12 L167 15 L156 18 L150 27 L144 18 L133 15 L144 12Z" fill="#c9a45c"/></svg>
+    <div class="goldtxt" style="font:400 italic 62px/1.25 var(--serif)">Semoga Allah memelihara iktikad kita hingga ke akhir hayat.</div></div>
+  <div id="credit" class="close-line" style="top:1640px;font:500 24px/1.4 var(--sans);color:#8a8470">Berdasarkan infografik “Kepentingan Berguru &amp; Silsilah: Memelihara Iktikad di Akhir Zaman”</div>
+
+  <div id="flash" class="layer" style="background:#fff6d8;z-index:60;opacity:0"></div>
+  <div id="subs"><div class="box"></div></div>
+  <div id="dots"><i></i><i></i><i></i></div>
+</div>
+<script src="timeline.js"></script>
+<script>
+(() => {
+const C = TL.cue, W = TL.words, CH = TL.chunks, END = C.end;
+const $ = id => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const eo = k => 1 - Math.pow(1 - clamp(k), 3);
+const eio = k => { k = clamp(k); return k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
+const ein = k => Math.pow(clamp(k), 3);
+// closed-form damped spring step response (damping ratio z >= 0.72: tiny overshoot, no bounce)
+function spring(dt, f = 2.0, z = 0.76) {
+  if (dt <= 0) return 0;
+  const w = 2 * Math.PI * f, wd = w * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt));
+}
+const NS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+
+// ---------- static builds ----------
+function buildPattern(svg, color, op) {
+  const g = svgEl('g', { stroke: color, 'stroke-width': 1.6, fill: 'none', opacity: op }, svg);
+  const s = 120;
+  for (let y = 0; y < 2160 + s; y += s) for (let x = 0; x < 1320 + s; x += s) {
+    const cx = x + (Math.floor(y / s) % 2 ? s / 2 : 0), cy = y;
+    const r1 = 44, r2 = 18, pts = [];
+    for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, r = i % 2 ? r2 + 12 : r1; pts.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); }
+    svgEl('polygon', { points: pts.join(' ') }, g);
+    svgEl('rect', { x: cx - 20, y: cy - 20, width: 40, height: 40, transform: `rotate(45 ${cx} ${cy})` }, g);
+  }
+  return g;
+}
+const patC = buildPattern($('patCream'), '#c9a45c', .22);
+const patG = buildPattern($('patGreen'), '#d9b468', .14);
+for (const id of ['cornerL', 'cornerR']) {
+  const s = $(id);
+  svgEl('path', { d: 'M0 0 H330 L0 250 Z', fill: '#0b4538' }, s);
+  svgEl('path', { d: 'M0 0 H300 L0 226 Z', fill: '#0e5141' }, s);
+  svgEl('path', { d: 'M318 0 L0 241', stroke: '#c9a45c', 'stroke-width': 6 }, s);
+  svgEl('path', { d: 'M286 0 L0 216', stroke: '#c9a45c', 'stroke-width': 2, opacity: .7 }, s);
+}
+// feed cards inside the hook phone
+const feed = $('feed');
+for (let i = 0; i < 8; i++) {
+  const y = 70 + i * 120, g = svgEl('g', {}, feed);
+  svgEl('rect', { x: 36, y, width: 248, height: 104, rx: 14, fill: '#fffaf0', stroke: '#e3d2a8', 'stroke-width': 2 }, g);
+  svgEl('circle', { cx: 64, cy: y + 28, r: 14, fill: i % 2 ? '#0e5141' : '#c9a45c' }, g);
+  svgEl('rect', { x: 88, y: y + 20, width: 120, height: 12, rx: 6, fill: '#d6c49a' }, g);
+  svgEl('rect', { x: 50, y: y + 56, width: 210, height: 10, rx: 5, fill: '#e8dcbc' }, g);
+  svgEl('rect', { x: 50, y: y + 76, width: 150, height: 10, rx: 5, fill: '#e8dcbc' }, g);
+}
+// floating question marks around the book
+const QS = [[220, 420, 70], [840, 400, 86], [880, 640, 60], [190, 700, 56], [760, 300, 52]];
+const qEls = QS.map(([x, y, s], i) => { const d = document.createElement('div'); d.textContent = '?'; d.style.cssText = `position:absolute;left:${x}px;top:${y}px;font:400 ${s}px/1 var(--serif);color:${i % 2 ? '#c9a45c' : '#0e5141'}`; $('qs').appendChild(d); return d; });
+// reaction icons rising from the phone
+const RX = [300, 780, 260, 820, 330, 760];
+const reactEls = RX.map((x, i) => { const d = document.createElement('div'); d.style.cssText = `position:absolute;left:${x}px;top:0;width:64px;height:64px;border-radius:32px;background:#fff;box-shadow:0 8px 20px rgba(0,0,0,.14),0 0 0 3px ${i % 2 ? '#c9a45c' : '#e9d9b2'};display:flex;align-items:center;justify-content:center`;
+  d.innerHTML = i % 3 === 0 ? '<svg width="34" height="30" viewBox="0 0 34 30"><path d="M17 28 C 6 20 1 14 1 8 A7 7 0 0 1 17 5 A7 7 0 0 1 33 8 C 33 14 28 20 17 28Z" fill="#d6455a"/></svg>'
+    : i % 3 === 1 ? '<svg width="34" height="32" viewBox="0 0 34 32"><path d="M4 4 H30 V22 H14 L7 29 V22 H4 Z" fill="none" stroke="#173a31" stroke-width="3.5" stroke-linejoin="round"/></svg>'
+    : '<svg width="32" height="32" viewBox="0 0 32 32"><path d="M4 16 L28 4 L20 28 L15 18 Z" fill="none" stroke="#173a31" stroke-width="3.5" stroke-linejoin="round"/></svg>';
+  $('reacts').appendChild(d); return d; });
+// sparkles around the magician
+const SP = [[760, 430, 46], [930, 520, 34], [700, 800, 30], [960, 760, 40]];
+const sparkEls = SP.map(([x, y, s]) => { const d = document.createElement('div'); d.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:${s}px;height:${s}px`;
+  d.innerHTML = `<svg width="${s}" height="${s}" viewBox="-10 -10 20 20"><path d="M0-10 L2.2-2.2 L10 0 L2.2 2.2 L0 10 L-2.2 2.2 L-10 0 L-2.2-2.2Z" fill="#e2b950"/></svg>`; $('sparks').appendChild(d); return d; });
+// compass ticks
+for (let i = 0; i < 36; i++) { const a = i * 10 * Math.PI / 180, r1 = i % 9 === 0 ? 150 : 160; svgEl('line', { x1: (r1 * Math.sin(a)).toFixed(1), y1: (-r1 * Math.cos(a)).toFixed(1), x2: (172 * Math.sin(a)).toFixed(1), y2: (-172 * Math.cos(a)).toFixed(1), stroke: '#a8803a', 'stroke-width': i % 9 === 0 ? 5 : 2.5 }, $('ticks')); }
+// light rays behind the lantern
+const raysG = svgEl('g', {}, $('rays'));
+for (let i = 0; i < 18; i++) { const a = i * 20; svgEl('path', { d: 'M0 0 L-26 -390 L26 -390 Z', fill: '#f2d68a', opacity: .16, transform: `rotate(${a})` }, raysG); }
+// silsilah chain: nodes bottom (murid) -> top (Rasulullah SAW)
+const NODES = [{ y: 1080, t: 'Murid', s: 'kita hari ini' }, { y: 955, t: 'Guru' }, { y: 830, t: 'Guru' }, { y: 705, t: 'Guru', s: 'dan seterusnya' }, { y: 585, t: 'Rasulullah SAW', s: '' }];
+const NX = 380;
+const chainLinks = [];
+for (let i = 0; i < NODES.length - 1; i++) {
+  const y0 = NODES[i].y - 40, y1 = NODES[i + 1].y + 40, n = 4, seg = [];
+  for (let k = 0; k < n; k++) {
+    const cy = lerp(y0, y1, (k + .5) / n), vert = k % 2 === 0;
+    seg.push(svgEl('rect', vert ? { x: NX - 13, y: cy - 22, width: 26, height: 44, rx: 13, fill: 'none', stroke: '#d9b468', 'stroke-width': 7 } : { x: NX - 4, y: cy - 20, width: 8, height: 40, rx: 4, fill: '#b48a3e' }, $('chainSvg')));
+  }
+  chainLinks.push(seg);
+}
+const pulse = svgEl('circle', { cx: NX, cy: 0, r: 16, fill: '#fff4c8', opacity: 0 }, $('chainSvg'));
+const nodeEls = NODES.map((n, i) => {
+  const d = document.createElement('div'); d.className = 'node'; d.style.left = NX + 'px'; d.style.top = n.y + 'px'; $('nodes').appendChild(d);
+  const l = document.createElement('div'); l.className = 'nlab'; l.style.left = (NX + 70) + 'px'; l.style.top = n.y + 'px';
+  l.innerHTML = n.t + (n.s ? `<small>${n.s}</small>` : ''); if (i === NODES.length - 1) { l.style.color = '#f6e2a8'; l.style.fontSize = '44px'; l.style.fontFamily = 'var(--serif)'; l.style.fontWeight = 400; }
+  $('nodes').appendChild(l); return [d, l];
+});
+// split .rise blocks into masked words
+document.querySelectorAll('.rise').forEach(el => {
+  const walk = node => {
+    [...node.childNodes].forEach(ch => {
+      if (ch.nodeType === 3) {
+        const frag = document.createDocumentFragment();
+        ch.textContent.split(/(\s+)/).forEach(tok => {
+          if (!tok) return;
+          if (/^\s+$/.test(tok)) { frag.appendChild(document.createTextNode(' ')); return; }
+          const w = document.createElement('span'); w.className = 'w'; const i = document.createElement('span'); i.textContent = tok; w.appendChild(i); frag.appendChild(w);
+        });
+        ch.replaceWith(frag);
+      } else if (ch.nodeType === 1 && !ch.classList.contains('w')) walk(ch);
+    });
+  };
+  walk(el);
+});
+// subtitle DOM per chunk
+const subBox = document.querySelector('#subs .box');
+const chunkEls = CH.map(c => { const spans = []; for (let j = c.a; j <= c.b; j++) { const s = document.createElement('span'); s.textContent = W[j].t; spans.push(s); } return spans; });
+let curChunk = -1;
+
+// ---------- animation helpers ----------
+const hide = el => { el.style.visibility = 'hidden'; };
+// enter on a spring at a, leave with an eased lift at b. Returns visible-progress or -1 when hidden.
+function pose(el, t, a, b, o = {}) {
+  const dy = o.dy ?? 46, sc = o.sc ?? .94, outDur = o.out ?? .42, f = o.f ?? 2.0;
+  if (t < a || (b != null && t > b + outDur)) { hide(el); return -1; }
+  const p = spring(t - a, f), q = b != null ? ein((t - b) / outDur) : 0;
+  el.style.visibility = 'inherit';
+  el.style.opacity = (clamp((t - a) / .28) * (1 - q)).toFixed(3);
+  const base = o.base || '';
+  const drift = o.drift ? Math.sin((t - a) * .9 + (o.ph || 0)) * o.drift : 0;
+  el.style.transform = `${base} translate(${o.dx ? ((1 - p) * o.dx).toFixed(2) : 0}px, ${((1 - p) * dy - q * (o.outDy ?? 34) + drift).toFixed(2)}px) scale(${lerp(sc, 1, p).toFixed(4)})`;
+  return p;
+}
+function rise(el, t, a, stagger = .055) {
+  el.querySelectorAll('.w>span').forEach((s, i) => {
+    const p = spring(t - a - i * stagger, 2.1, .8);
+    s.style.transform = `translateY(${((1 - p) * 108).toFixed(2)}%) rotate(${((1 - p) * 4).toFixed(2)}deg)`;
+  });
+}
+function hl(id, t, a) { const k = eio((t - a) / .45); $(id).querySelector('i').style.transform = `scaleX(${k.toFixed(3)})`; }
+function stamp(el, t, a, b, rot) {
+  if (t < a || t > b + .4) { hide(el); return; }
+  const k = eo((t - a) / .22), q = ein((t - b) / .4);
+  el.style.visibility = 'inherit'; el.style.opacity = (clamp((t - a) / .12) * (1 - q)).toFixed(3);
+  el.style.transform = `rotate(${rot}deg) scale(${lerp(1.7, 1, k).toFixed(4)})`;
+}
+const coverR = (cx, cy) => Math.max(Math.hypot(cx, cy), Math.hypot(1080 - cx, cy), Math.hypot(cx, 1920 - cy), Math.hypot(1080 - cx, 1920 - cy)) * 1.05;
+
+// ---------- the film ----------
+window.seek = t => {
+  // background: green flood from the centre at S2, contracts into the compass at S3
+  let gr = 0, gy = 700;
+  if (t >= C.s2 && t < C.s3) gr = coverR(540, 700) * eio((t - C.s2) / .95);
+  else if (t >= C.s3) { gy = 640; gr = coverR(540, 640) * (1 - eio((t - C.s3) / .95)); }
+  const green = $('bgGreen');
+  if (gr <= .5) green.style.visibility = 'hidden';
+  else { green.style.visibility = 'visible'; green.style.clipPath = `circle(${gr.toFixed(1)}px at 540px ${gy}px)`; }
+  const drift = (t * 6) % 120;
+  patC.setAttribute('transform', `translate(${(-drift * .5).toFixed(2)} ${(-drift).toFixed(2)})`);
+  patG.setAttribute('transform', `translate(${(-drift * .5).toFixed(2)} ${(-drift).toFixed(2)})`);
+  $('patCream').style.opacity = (clamp(t / 1.4) * 1).toFixed(3);
+  // corners slide in
+  const ck = spring(t - .1, 1.6, .8);
+  $('cornerL').style.transform = `translate(${((1 - ck) * -330).toFixed(1)}px,${((1 - ck) * -250).toFixed(1)}px)`;
+  $('cornerR').style.transform = `scaleX(-1) translate(${((1 - ck) * -330).toFixed(1)}px,${((1 - ck) * -250).toFixed(1)}px)`;
+
+  // ===== INTRO =====
+  const introOut = C.inilah - .35;
+  if (pose($('hookPhone'), t, .25, introOut, { dy: 80, drift: 6 }) >= 0) $('feed').setAttribute('transform', `translate(0 ${(-((t * 34) % 120)).toFixed(2)})`);
+  pose($('qBadge'), t, C.tapi, introOut, { sc: .3, dy: 20, f: 2.4, drift: 5, ph: 1 });
+  if (pose($('hook1'), t, C.hook - .15, C.tapi - .25, { dy: 0, sc: 1 }) >= 0) rise($('hook1'), t, C.hook - .15);
+  if (pose($('hook2'), t, C.tapi + .5, introOut, { dy: 0, sc: 1 }) >= 0) rise($('hook2').querySelector('.rise'), t, C.tapi + .5, .045);
+  const tOut = C.s1 - .45;
+  if (pose($('title'), t, C.inilah, tOut, { dy: 0, sc: 1 }) >= 0) {
+    rise($('t1'), t, C.inilah + .1, .08); rise($('t2'), t, C.inilah + .9, .06);
+    $('ornPath').style.strokeDasharray = '205 400'; $('ornPath').style.strokeDashoffset = (205 * (1 - eio((t - C.inilah) / .9))).toFixed(1);
+    $('t3').style.opacity = clamp((t - C.inilah - 1.8) / .5).toFixed(3);
+    $('t3').style.letterSpacing = lerp(14, 6, eo((t - C.inilah - 1.8) / 1.2)).toFixed(2) + 'px';
+  }
+
+  // ===== SECTION 1 =====
+  pose($('hdr1'), t, C.s1 - .1, C.s2 + .1, { base: 'translateX(-50%)', dy: -40, sc: .9 });
+  const o1 = C.s1b - .35;
+  pose($('medBook'), t, C.s1 + .35, o1, { dy: 70, sc: .8, drift: 7 });
+  qEls.forEach((q, i) => {
+    const a = C.membaca + i * .22;
+    if (t < a || t > o1 + .4) { hide(q); return; }
+    const p = spring(t - a, 2.2, .72), out = ein((t - o1) / .4);
+    q.style.visibility = 'inherit'; q.style.opacity = (clamp((t - a) / .25) * (1 - out)).toFixed(3);
+    q.style.transform = `translate(${(Math.sin(t * 1.3 + i) * 8).toFixed(2)}px,${(Math.cos(t * 1.1 + i * 2) * 10).toFixed(2)}px) rotate(${(Math.sin(t * .9 + i) * 12).toFixed(2)}deg) scale(${p.toFixed(3)})`;
+  });
+  pose($('card1'), t, C.s1 + .7, o1);
+  hl('hlMut', t, C.mutasy);
+  pose($('tagJahil'), t, C.jahil2 - .1, C.mutasy - .6, { dy: 30, sc: .9 });
+
+  const o2 = C.s1c - .35;
+  pose($('medPhone'), t, C.s1b + .2, o2, { dy: 70, sc: .8, drift: 7 });
+  reactEls.forEach((r, i) => {
+    const a = C.tiktok + i * .35;
+    if (t < a || t > o2 + .3) { hide(r); return; }
+    const cyc = ((t - a) % 2.6) / 2.6, out = ein((t - o2) / .3);
+    r.style.visibility = 'inherit';
+    r.style.opacity = (Math.sin(Math.PI * cyc) * (1 - out)).toFixed(3);
+    r.style.transform = `translate(${(Math.sin(cyc * 6 + i) * 14).toFixed(2)}px,${lerp(860, 420, eo(cyc)).toFixed(2)}px) scale(${lerp(.6, 1.05, eo(cyc * 1.6)).toFixed(3)})`;
+  });
+  pose($('card2'), t, C.s1b + .5, o2);
+  stamp($('stMufti'), t, C.mufti, o2, -9);
+
+  const o3 = C.s2 - .15;
+  pose($('frMagic'), t, C.s1c + .2, o3, { dy: 70, sc: .85, drift: 6 });
+  sparkEls.forEach((s, i) => {
+    const a = C.magic + i * .12;
+    if (t < a || t > o3 + .3) { hide(s); return; }
+    const k = spring(t - a, 2.4, .72), out = ein((t - o3) / .3);
+    s.style.visibility = 'inherit'; s.style.opacity = ((1 - out)).toFixed(3);
+    s.style.transform = `scale(${(k * (.75 + .25 * Math.sin(t * 5 + i * 2))).toFixed(3)}) rotate(${(t * 40 + i * 30).toFixed(1)}deg)`;
+  });
+  pose($('card3'), t, C.s1c + .5, o3);
+  stamp($('stTipu'), t, C.tipu, o3, 7);
+
+  // ===== SECTION 2 =====
+  const h2 = pose($('hdr2'), t, C.s2 + .55, C.s3 + .05, { base: 'translateX(-50%)', dy: -40, sc: .9 });
+  if (h2 >= 0) $('hdr2').style.background = 'linear-gradient(180deg,#073326,#05261d)';
+  if (pose($('jalan'), t, C.s2 + .35, C.berguru - .35, { dy: 0, sc: 1 }) >= 0) rise($('jalan').querySelector('.rise'), t, C.s2 + .45, .09);
+  // scroll unrolls from the centre
+  const sOut = C.sah - .3;
+  if (pose($('scroll'), t, C.berguru - .2, sOut, { dy: 20, sc: .96 }) >= 0) {
+    const u = eio((t - C.berguru + .2) / .9), half = 390 * u;
+    $('scrollRect').setAttribute('x', (430 - half).toFixed(1)); $('scrollRect').setAttribute('width', (2 * half).toFixed(1));
+    $('rodL').setAttribute('transform', `translate(${(390 - half).toFixed(1)} 0)`); $('rodR').setAttribute('transform', `translate(${(half - 390).toFixed(1)} 0)`);
+  }
+  // chain of transmission: nodes from murid up to Rasulullah SAW
+  const dOut = C.sah - .3, nT = [C.silsilah, C.silsilah + .7, C.gurukepada, C.gurukepada + .6, C.rasul];
+  const chainOn = t >= C.silsilah - .1 && t < dOut + .45;
+  $('chainSvg').style.visibility = chainOn ? 'inherit' : 'hidden'; $('nodes').style.visibility = chainOn ? 'inherit' : 'hidden';
+  if (chainOn) {
+    const q = ein((t - dOut) / .45);
+    $('chainSvg').style.opacity = $('nodes').style.opacity = (1 - q).toFixed(3);
+    $('chainSvg').style.transform = $('nodes').style.transform = `translateY(${(-q * 30).toFixed(1)}px)`;
+    nodeEls.forEach(([d, l], i) => {
+      const p = spring(t - nT[i], 2.3, .74);
+      d.style.transform = `scale(${clamp(p, 0, 1.2).toFixed(3)})`; d.style.opacity = clamp((t - nT[i]) / .15).toFixed(3);
+      l.style.opacity = clamp((t - nT[i] - .1) / .3).toFixed(3); l.style.transform = `translate(${((1 - eo((t - nT[i] - .1) / .5)) * -24).toFixed(1)}px,-50%)`;
+      if (i === NODES.length - 1) d.style.boxShadow = `0 0 0 5px rgba(5,42,33,.9),0 0 0 8px #c9a45c,0 0 ${(30 + 30 * clamp((t - nT[i]) / .6) * (1 + .2 * Math.sin(t * 3))).toFixed(1)}px ${(10 * clamp((t - nT[i]) / .6)).toFixed(1)}px rgba(246,220,149,.75)`;
+    });
+    chainLinks.forEach((seg, i) => seg.forEach((lk, k) => { const a = nT[i] + .15 + k * ((nT[i + 1] - nT[i] - .15) / seg.length); lk.style.opacity = clamp((t - a) / .18).toFixed(3); }));
+    // light flows down the chain once Rasulullah SAW is reached
+    if (t > C.rasul + .4) { const cyc = ((t - C.rasul - .4) % 1.6) / 1.6; pulse.setAttribute('cy', lerp(NODES[4].y, NODES[0].y, eio(cyc)).toFixed(1)); pulse.setAttribute('opacity', (Math.sin(Math.PI * cyc) * .95).toFixed(3)); }
+    else pulse.setAttribute('opacity', 0);
+  }
+  const o4 = C.s2b - .35;
+  pose($('medScholars'), t, C.sah, o4, { dy: 60, sc: .8, drift: 7 });
+  pose($('card4'), t, C.sah + .25, o4);
+  hl('hlPutus', t, C.sah + 4.5);
+
+  const o5 = C.s2c - .35;
+  if (pose($('rays'), t, C.s2b + .1, o5, { dy: 0, sc: .6, f: 1.2 }) >= 0) {
+    raysG.setAttribute('transform', `rotate(${(t * 7).toFixed(2)})`);
+    $('rays').style.opacity = (parseFloat($('rays').style.opacity) * (.55 + .45 * clamp((t - C.nur) / .8))).toFixed(3);
+  }
+  const lp = pose($('medLantern'), t, C.s2b + .1, o5, { dy: 60, sc: .8, drift: 6 });
+  if (lp >= 0) { const g = clamp((t - C.nur) / .8) * (.75 + .25 * Math.sin(t * 2.4)); $('medLantern').style.boxShadow = `0 0 0 7px #c9a45c,0 0 0 17px rgba(201,164,92,.2),0 0 ${(40 + 90 * g).toFixed(1)}px ${(10 + 30 * g).toFixed(1)}px rgba(246,214,130,${(.15 + .45 * g).toFixed(3)})`; }
+  if (pose($('nurT'), t, C.nur - .1, o5, { dy: 0, sc: 1 }) >= 0) { rise($('nurT').querySelector('.rise'), t, C.nur - .1, .12); $('nurSub').style.opacity = clamp((t - C.cahaya) / .5).toFixed(3); $('nurSub').style.transform = `translateY(${((1 - eo((t - C.cahaya) / .6)) * 18).toFixed(1)}px)`; }
+  pose($('card5'), t, C.bukan, o5, { dy: 36 });
+
+  const o6 = C.s3 - .2;
+  pose($('medPillars'), t, C.s2c + .1, o6, { dy: 60, sc: .8, drift: 6 });
+  pose($('lblSy'), t, C.syariat, o6, { dx: -60, dy: 0, sc: .9 });
+  pose($('lblTa'), t, C.tarekat, o6, { dx: 60, dy: 0, sc: .9 });
+  if (pose($('arrow'), t, C.bersih - .5, o6, { dy: 0, sc: 1 }) >= 0) {
+    const L = 240, k = eio((t - C.bersih + .5) / .6);
+    $('arrowPath').style.strokeDasharray = L; $('arrowPath').style.strokeDashoffset = (L * (1 - k)).toFixed(1);
+    $('arrowHead').style.opacity = clamp((k - .85) / .15).toFixed(3);
+  }
+  if (pose($('heart'), t, C.bersih, o6, { dy: 10, sc: .3, f: 2.3, drift: 5 }) >= 0) $('heartGlow').setAttribute('r', (100 + 12 * Math.sin(t * 3)).toFixed(1));
+  pose($('card6'), t, C.s2c + .35, o6);
+  hl('hlHati', t, C.bersih + .2);
+
+  // ===== SECTION 3 =====
+  pose($('hdr3'), t, C.s3 + .55, C.s4 - .2, { base: 'translateX(-50%)', dy: -40, sc: .9 });
+  const o7 = C.s3b - .35;
+  const cp = pose($('compass'), t, C.s3 + .4, o7, { dy: 60, sc: .7 });
+  if (cp >= 0) {
+    // the needle wanders until "keikhlasan", then settles on north
+    const wander = tt => 95 * Math.sin(tt * 2.1) + 50 * Math.sin(tt * 3.3 + 1) + 30 * Math.sin(tt * 5.2);
+    let ang;
+    if (t < C.ikhlas) ang = wander(t) * clamp((C.ikhlas - t) / 2.5 + .45, .45, 1);
+    else { const a0 = wander(C.ikhlas) * .45; ang = a0 * (1 - spring(t - C.ikhlas, 1.3, .74)); }
+    $('needle').setAttribute('transform', `rotate(${ang.toFixed(2)})`);
+    const glow = clamp((t - C.ikhlas) / .6) * (.6 + .25 * Math.sin(t * 2.6));
+    $('cGlow').setAttribute('opacity', (glow * .55).toFixed(3));
+    const up = eio((t - C.ihdinas + .3) / .8);
+    const cur = $('compass').style.transform;
+    $('compass').style.transform = cur + ` translate(0,${(-up * 205).toFixed(1)}px) scale(${lerp(1, .5, up).toFixed(4)})`;
+  }
+  if (pose($('kunci'), t, C.kunci + .1, C.ihdinas - .45, { dy: 0, sc: 1 }) >= 0) rise($('kunci').querySelector('.rise'), t, C.ikhlas - .1, .1);
+  pose($('arab'), t, C.ihdinas - .25, o7, { dy: 30, sc: .92 });
+  pose($('translit'), t, C.ihdinas + .5, o7, { dy: 26 });
+  pose($('transl'), t, C.tunjuk, o7, { dy: 26 });
+  pose($('card7'), t, C.doa, o7, { dy: 30 });
+  hl('hlCari', t, C.doa + 1.6);
+
+  const o8 = C.s3c - .3;
+  pose($('medPray'), t, C.s3b + .1, o8, { dy: 60, sc: .8, drift: 6 });
+  pose($('medGuide'), t, C.s3b + .45, o8, { dy: 60, sc: .8, drift: 6, ph: 2 });
+  if (pose($('pathGold'), t, C.s3b + .9, o8, { dy: 0, sc: 1 }) >= 0) { const L = 620, k = eio((t - C.s3b - .9) / 1.4); $('pg').style.strokeDashoffset = (-t * 30).toFixed(1); $('pathGold').style.clipPath = `inset(0 ${((1 - k) * 100).toFixed(2)}% 0 0)`; }
+  pose($('card8'), t, C.s3b + .35, o8);
+  hl('hlMur', t, C.mursyid - .3);
+
+  const o9 = C.s4 - .3;
+  pose($('medDark'), t, C.s3c + .1, o9, { dy: 60, sc: .8, drift: 6 });
+  pose($('medKing'), t, C.nafsu - .3, o9, { dy: 60, sc: .8, drift: 6, ph: 2 });
+  pose($('vs'), t, C.nafsu, o9, { dy: 0, sc: .3, f: 2.4 });
+  pose($('card9'), t, C.s3c + .35, o9);
+  stamp($('stPalsu'), t, C.palsu, o9, -8);
+
+  // ===== CLOSING =====
+  const lp2 = pose($('medEnd'), t, C.s4 + .1, null, { dy: 50, sc: .8, drift: 5 });
+  if (lp2 >= 0) { const g = .7 + .3 * Math.sin(t * 2.2); $('medEnd').style.boxShadow = `0 0 0 6px #c9a45c,0 0 0 14px rgba(201,164,92,.2),0 0 ${(70 * g).toFixed(1)}px ${(18 * g).toFixed(1)}px rgba(246,214,130,.45)`; }
+  pose($('c1'), t, C.niat - .1, null, { dy: 40 });
+  pose($('c2'), t, C.carilah - .1, null, { dy: 40 });
+  pose($('c3'), t, C.semoga - .1, null, { dy: 40 });
+  pose($('credit'), t, C.voend + .2, null, { dy: 10 });
+
+  // ===== SUBTITLES =====
+  let ci = -1;
+  for (let i = 0; i < CH.length; i++) {
+    const s = W[CH[i].a].s - .12, nxt = i + 1 < CH.length ? W[CH[i + 1].a].s - .12 : 1e9, e = Math.min(nxt, W[CH[i].b].e + .7);
+    if (t >= s && t < e) { ci = i; break; }
+  }
+  if (ci !== curChunk) { subBox.replaceChildren(); if (ci >= 0) chunkEls[ci].forEach((s, k) => { if (k) subBox.appendChild(document.createTextNode(' ')); subBox.appendChild(s); }); curChunk = ci; }
+  $('subs').style.visibility = ci >= 0 ? 'inherit' : 'hidden';
+  if (ci >= 0) {
+    const s0 = W[CH[ci].a].s - .12, k = eo((t - s0) / .2);
+    $('subs').style.opacity = k.toFixed(3); $('subs').style.transform = `translateY(${((1 - k) * 10).toFixed(1)}px)`;
+    chunkEls[ci].forEach((s, k2) => { const w = W[CH[ci].a + k2]; s.className = t >= w.e ? 'on' : t >= w.s - .03 ? 'now' : ''; });
+  }
+  // section dots
+  const sec = t < C.s1 ? -1 : t < C.s2 ? 0 : t < C.s3 ? 1 : t < C.s4 ? 2 : -1;
+  const dk = clamp((t - C.s1 + .2) / .5) * (1 - clamp((t - C.s4) / .5));
+  $('dots').style.opacity = dk.toFixed(3);
+  [...$('dots').children].forEach((d, i) => { d.style.width = (i === sec ? 46 : 14) + 'px'; d.style.background = i === sec ? '#c9a45c' : 'rgba(201,164,92,.35)'; });
+
+  // soft white-gold flash on the two Nur moments
+  const fl = Math.max(0, 1 - Math.abs(t - C.nur - .05) / .25) * .35;
+  $('flash').style.opacity = fl.toFixed(3);
+  // fade from/to black at the very ends
+  $('stage').style.filter = '';
+  const fade = Math.min(clamp(t / .35), clamp((END - t) / .8));
+  $('stage').style.opacity = fade.toFixed(3);
+};
+window.DUR = END;
+document.fonts.ready.then(() => Promise.all([...document.images].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })))).then(() => { window.seek(0); window.ready = true; });
+
+// preview controls (never used by the render)
+if (!/render/.test(location.search)) {
+  let playing = false, t0 = 0, tt = 0; const audio = new Audio('audio/narration.wav');
+  const hud = document.createElement('div'); hud.style.cssText = 'position:fixed;left:8px;top:8px;z-index:99;font:14px monospace;color:#fff;background:#000a;padding:4px 8px'; document.body.appendChild(hud);
+  const loop = now => { if (playing) { tt = (now - t0) / 1000; if (tt >= END) playing = false; window.seek(tt); hud.textContent = tt.toFixed(2) + ' s'; requestAnimationFrame(loop); } };
+  const qs = new URLSearchParams(location.search); if (qs.get('t')) { tt = +qs.get('t'); setTimeout(() => window.seek(tt), 300); }
+  addEventListener('keydown', e => {
+    if (e.code === 'Space') { playing = !playing; if (playing) { t0 = performance.now() - tt * 1000; audio.currentTime = Math.max(0, tt); audio.play(); requestAnimationFrame(loop); } else audio.pause(); }
+    if (e.code === 'ArrowRight' || e.code === 'ArrowLeft') { tt = Math.max(0, tt + (e.code === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 1 / 30 : .5)); window.seek(tt); hud.textContent = tt.toFixed(2) + ' s'; }
+    if (e.code === 'KeyR') { tt = 0; t0 = performance.now(); audio.currentTime = 0; playing = true; audio.play(); requestAnimationFrame(loop); }
+  });
+}
+})();
+</script>
+</body>
+</html>

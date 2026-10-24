@@ -10,3 +10,8 @@ examples/*/probe/
 examples/*/out/
 __pycache__/
 .DS_Store
+films/*/out/
+films/*/probe/
+films/*/out_render.log
+films/*/audio/*.f32
+films/*/audio/narration.wav
