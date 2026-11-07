@@ -1,0 +1,23 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 720
+PlayResY: 1280
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Cap,Inter ExtraBold,52,&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,5,2,2,50,50,330,1
+Style: Kuning,Inter ExtraBold,52,&H0000E5FF,&H0000E5FF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,5,2,2,50,50,330,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.20,0:00:02.60,Cap,,0,0,0,,{\fscx80\fscy80\t(0,120,\fscx100\fscy100)}hmm...\Napa benda mama bagi ni
+Dialogue: 0,0:00:02.60,0:00:05.00,Cap,,0,0,0,,{\fscx80\fscy80\t(0,120,\fscx100\fscy100)}ada lubang, ada kipas...\Nmahal ni kot
+Dialogue: 0,0:00:05.00,0:00:07.40,Cap,,0,0,0,,{\fscx80\fscy80\t(0,120,\fscx100\fscy100)}jap. check dari\Nbawah pulak
+Dialogue: 0,0:00:07.40,0:00:09.80,Cap,,0,0,0,,{\fscx80\fscy80\t(0,120,\fscx100\fscy100)}tekan sini...\Ntak jadi apa pun
+Dialogue: 0,0:00:09.80,0:00:12.30,Kuning,,0,0,0,,{\fscx80\fscy80\t(0,120,\fscx100\fscy100)}dah la, bukan\Nboleh makan pun
+Dialogue: 0,0:00:12.30,0:00:14.80,Cap,,0,0,0,,{\fscx80\fscy80\t(0,120,\fscx100\fscy100)}tapi sayang nak lepas.\Ngolek sikit la
+Dialogue: 0,0:00:14.80,0:00:17.30,Cap,,0,0,0,,{\fscx80\fscy80\t(0,120,\fscx100\fscy100)}kaki dah sejuk.\Ntapi kerja belum siap
+Dialogue: 0,0:00:17.30,0:00:19.50,Kuning,,0,0,0,,{\fscx80\fscy80\t(0,120,\fscx100\fscy100)}eh eh...\Nsape tu??
+Dialogue: 0,0:00:19.50,0:00:21.70,Cap,,0,0,0,,{\fscx80\fscy80\t(0,120,\fscx100\fscy100)}laju2 nak pergi mana kak.\Nduduk la sini dengan adik
