@@ -30,7 +30,7 @@ ffmpeg -framerate 30 -i fr2/f%05d.png -i cerita_mix.wav -c:v libx264 -crf 18 -pr
 
 **Pembetulan umur:** siri "Meniarap Di Pantai" (018–024) ialah **1 tahun 7 bulan**, bukan bawah 7 bulan seperti pada nama fail. Pembetulan ini dibuat dalam `AGE_OVERRIDES` (`prepare.py`). Fail Drive asal tidak diubah.
 
-`info.json` untuk versi 2 juga memerlukan `nama_penuh`, `lahir` dan `setahun` (cth. `"setahun": "13 Februari 2026"`).
+`info.json` untuk versi 2 juga memerlukan `nama_penuh`, `lahir` dan `setahun` (cth. `"setahun": "1 Januari 2026"`).
 
 ## Versi 1: `src/film.html`, montaj 73 saat
 Versi pertama dibuat sebelum pembetulan umur. Selepas `prepare.py` dikemas kini, versi ini tidak lagi memaparkan flipbook pantai di bahagian "Bawah 7 Bulan".
