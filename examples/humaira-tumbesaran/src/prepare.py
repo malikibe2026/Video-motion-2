@@ -17,8 +17,26 @@ os.makedirs(OUT, exist_ok=True)
 MAXD, OUTLINE, PAD = 900, 9, 44
 
 
+# Pembetulan umur yang diberi pengguna (mengatasi label pada nama fail).
+# Siri meniarap di pantai (baju merah jambu) sebenarnya 1 tahun 7 bulan.
+AGE_OVERRIDES = [('Meniarap_Di_Pantai', '1 Tahun 7 Bulan', 19, 19)]
+AGE_RE = r'(Baru_Lahir|Bawah_7_Bulan|\d+_Tahun_\d+_Bulan|\d+_Tahun|\d+_Bulan)_?'
+
+
+def describe(name):
+    """Keterangan pose/pakaian daripada nama fail, cth. 'Tidur Berbedung Biru'."""
+    s = re.sub(r'\.png$', '', name)
+    s = re.sub(r'^\d+\._?|^\d+_', '', s).replace('Humaira_', '')
+    s = re.sub(AGE_RE, '', s)
+    s = re.sub(r'_\d+$', '', s)
+    return s.replace('_', ' ').strip()
+
+
 def parse_age(name):
     """Pulangkan (label, bulan_min, bulan_max) daripada nama fail."""
+    for key, label, a, b in AGE_OVERRIDES:
+        if key in name:
+            return label, a, b
     s = name.replace('_', ' ')
     if 'Baru Lahir' in s:
         return 'Baru Lahir', 0, 0
@@ -74,11 +92,17 @@ for f in files:
     n = int(num.group(1))
     label, a, b = parse_age(f)
     out_name = f'{n:03d}.png'
-    img = sticker(Image.open(os.path.join(SRC, f)))
-    img.save(os.path.join(OUT, out_name), optimize=True)
+    dst = os.path.join(OUT, out_name)
+    if os.path.exists(dst) and '--force' not in sys.argv:   # pelekat sudah ada: guna semula
+        img = Image.open(dst)
+    else:
+        img = sticker(Image.open(os.path.join(SRC, f)))
+        img.save(dst, optimize=True)
     items.append({'n': n, 'file': 'assets/img/' + out_name, 'w': img.width, 'h': img.height,
-                  'age': label, 'm0': a, 'm1': b, 'src': f})
+                  'age': label, 'm0': a, 'm1': b, 'desc': describe(f), 'src': f})
     print(out_name, img.size, label)
 
+# susun ikut umur (gambar tanpa umur, iaitu keluarga, di akhir), kemudian nombor fail
+items.sort(key=lambda i: (i['m1'] if i['m1'] is not None else 99, i['n']))
 json.dump(items, open(os.path.join(HERE, 'assets', 'manifest.json'), 'w'), ensure_ascii=False, indent=1)
 print('jumlah', len(items))

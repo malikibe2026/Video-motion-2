@@ -18,3 +18,6 @@ examples/humaira-tumbesaran/src/*.wav
 examples/humaira-tumbesaran/src/*.mp4
 examples/humaira-tumbesaran/src/*.log
 examples/humaira-tumbesaran/src/schedule.json
+examples/humaira-tumbesaran/src/fr2/
+examples/humaira-tumbesaran/src/probe2/
+examples/humaira-tumbesaran/src/*_schedule.json

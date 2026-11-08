@@ -7,7 +7,8 @@ let pw;
 try { pw = require('playwright'); } catch { pw = require('/opt/node-tools/node_modules/playwright'); }
 const fs = require('fs'), path = require('path');
 const [, , mode, a, b, c] = process.argv;
-const FPS = 30, URL = 'http://127.0.0.1:8767/film.html';
+const FPS = 30, FILM = process.env.FILM || 'film.html', URL = 'http://127.0.0.1:8767/' + FILM;
+const SCHED = FILM === 'film.html' ? 'schedule.json' : FILM.replace('.html', '_schedule.json');
 (async () => {
   const browser = await pw.chromium.launch({ args: ['--font-render-hinting=none', '--force-color-profile=srgb'] });
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
@@ -15,8 +16,8 @@ const FPS = 30, URL = 'http://127.0.0.1:8767/film.html';
   await page.goto(URL);
   const info = await page.evaluate(() => window.ready);
   if (mode === 'schedule') {
-    fs.writeFileSync('schedule.json', JSON.stringify(info));
-    console.log('jumlah saat', info.total.toFixed(2), 'halaman', info.pages, 'bingkai', Math.ceil(info.total * FPS));
+    fs.writeFileSync(SCHED, JSON.stringify(info));
+    console.log(SCHED, 'jumlah saat', info.total.toFixed(2), 'halaman', info.pages || info.scenes.length, 'bingkai', Math.ceil(info.total * FPS));
     await browser.close(); return;
   }
   let frames, out;

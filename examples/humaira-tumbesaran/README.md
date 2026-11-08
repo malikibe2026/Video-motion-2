@@ -1,4 +1,39 @@
-# Humaira: tumbesaran 0 hingga 18 bulan
+# Humaira: kisah tumbesaran
+
+## Versi 2 (utama): `src/cerita.html`, video bercerita kira-kira 112 saat
+Video 1920×1080, 30 fps, 96 BPM. Ada 12 bab, setiap bab dengan gaya visual dan peralihan berbeza, serta sarikata cerita:
+
+| Bab | Gaya visual | Peralihan masuk |
+|---|---|---|
+| Pembukaan | Langit subuh, matahari terbit, bokeh, sapuan cahaya, tajuk huruf demi huruf | – |
+| Hari pertama | Ken Burns, halo, kerlipan bintang, cap tarikh | Pudar |
+| Bulan-bulan awal | Polaroid jatuh ke meja, kamera pan, pita washi | Tolak ke atas |
+| 7 bulan | Panel belah 4 gaya majalah | Sapuan |
+| 8 bulan | Karusel 3D berputar dengan kedalaman | Iris bulat |
+| 9–11 bulan | Odometer nombor; buih, kad terbalik 3D, kipas kad | Whip pan |
+| Genap setahun | Angka "1" dilukis, sinar berputar, belon, konfeti | Kilat |
+| 1 thn 1–3 bln | Laluan tapak kaki, papan tanda, bukit parallax | Tolak ke kiri |
+| 1 thn 4–6 bln | Tipografi kinetik warna terang, whip pan antara bulan | Whip pan |
+| 1 thn 7 bln | Pantai beranimasi (ombak, awan, burung), flipbook stop-motion | Zum tembus |
+| Keluarga | Sinar keemasan berputar, hati terapung | Pudar |
+| Penutup | Mozek 78 gambar, nama penuh dan tarikh lahir | Pudar |
+
+Cip umur (kiri atas) dan garis masa 0–19 bulan (bawah) dipaparkan sepanjang cerita.
+
+```sh
+FILM=cerita.html node render.js schedule        # cerita_schedule.json
+FILM=cerita.html node render.js full fr2 0 3375 # bingkai
+python3 audio_cerita.py                         # cerita_mix.wav
+ffmpeg -framerate 30 -i fr2/f%05d.png -i cerita_mix.wav -c:v libx264 -crf 18 -preset slow -pix_fmt yuv420p \
+  -af loudnorm=I=-14:TP=-1.5:LRA=11 -c:a aac -b:a 192k -shortest cerita.mp4
+```
+
+**Pembetulan umur:** siri "Meniarap Di Pantai" (018–024) ialah **1 tahun 7 bulan**, bukan bawah 7 bulan seperti pada nama fail. Pembetulan ini dibuat dalam `AGE_OVERRIDES` (`prepare.py`). Fail Drive asal tidak diubah.
+
+`info.json` untuk versi 2 juga memerlukan `nama_penuh`, `lahir` dan `setahun` (cth. `"setahun": "13 Februari 2026"`).
+
+## Versi 1: `src/film.html`, montaj 73 saat
+Versi pertama dibuat sebelum pembetulan umur. Selepas `prepare.py` dikemas kini, versi ini tidak lagi memaparkan flipbook pantai di bahagian "Bawah 7 Bulan".
 
 Video montaj 1920×1080, 30 fps, kira-kira 73 saat, 120 BPM. Ia menggunakan 78 ilustrasi kartun berlatar telus daripada folder Drive `Humaira_Kartun_Tersusun`.
 
