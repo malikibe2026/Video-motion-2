@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>Humaira tumbesaran</title>
+<style>
+@font-face { font-family: Fredoka; font-weight: 500; src: url(assets/fonts/fredoka-latin-500-normal.woff2); }
+@font-face { font-family: Fredoka; font-weight: 600; src: url(assets/fonts/fredoka-latin-600-normal.woff2); }
+@font-face { font-family: Nunito; font-weight: 700; src: url(assets/fonts/nunito-latin-700-normal.woff2); }
+@font-face { font-family: Nunito; font-weight: 800; src: url(assets/fonts/nunito-latin-800-normal.woff2); }
+:root { --ink: #3b2a3f; --soft: #8a7385; --pink: #e8628e; --pink2: #f6a8c0; --cream: #fff7ee; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--cream); }
+#stage { position: absolute; inset: 0; overflow: hidden; }
+canvas { position: absolute; inset: 0; }
+.it { position: absolute; left: 0; top: 0; transform-origin: 50% 60%; will-change: transform; display: none; }
+.lab { position: absolute; left: 110px; top: 340px; width: 520px; color: var(--ink); }
+.lab .k { font: 800 26px/1 Nunito; letter-spacing: .32em; color: var(--pink); overflow: hidden; height: 34px; }
+.lab .k span { display: inline-block; }
+.lab .ln { overflow: hidden; height: 132px; margin-top: 6px; }
+.lab .ln span { display: inline-block; font: 600 118px/132px Fredoka; letter-spacing: -.01em; white-space: nowrap; }
+.lab .sub { margin-top: 22px; font: 700 26px/1.35 Nunito; color: var(--soft); overflow: hidden; }
+.lab .sub span { display: inline-block; }
+#tl { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; pointer-events: none; }
+.ttl { position: absolute; left: 0; width: 1920px; text-align: center; color: var(--ink); }
+.ttl .big { font: 600 200px/1 Fredoka; letter-spacing: -.01em; }
+.ttl .big span { display: inline-block; }
+.ttl .s { margin-top: 26px; font: 700 40px/1.2 Nunito; color: var(--soft); overflow: hidden; height: 52px; }
+.ttl .s span { display: inline-block; }
+.tag { position: absolute; right: 44px; top: 36px; font: 700 20px/1 Nunito; letter-spacing: .08em; color: var(--soft); opacity: .8; }
+#flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bg" width="1920" height="1080"></canvas>
+  <div id="items"></div>
+  <div class="lab" id="lab"></div>
+  <svg id="tl" viewBox="0 0 1920 1080"></svg>
+  <canvas id="fx" width="1920" height="1080"></canvas>
+  <div class="ttl" id="intro" style="top:330px"><div class="big" id="ib"></div><div class="s"><span id="is">Baru lahir hingga 1 tahun 6 bulan</span></div></div>
+  <div class="ttl" id="outro" style="top:300px"><div class="big" id="ob"></div><div class="s"><span id="os">78 ilustrasi kartun · 18 bulan kenangan</span></div></div>
+  <div class="tag" id="tag">ILUSTRASI KARTUN</div>
+  <div id="flash"></div>
+</div>
+<script>
+'use strict';
+const W = 1920, H = 1080, B = 0.5;            // 120 BPM: satu ketukan = 0.5 s
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const easeIO = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const easeIn = k => k * k * k;
+const easeOut = k => 1 - Math.pow(1 - k, 3);
+function spring(t, f = 2.2, z = .55) {           // tindak balas langkah, bentuk tertutup
+  if (t <= 0) return 0;
+  const w = 2 * Math.PI * f, wd = w * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w * t) * (Math.cos(wd * t) + z * w / wd * Math.sin(wd * t));
+}
+function rnd(i) { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+
+let MAN, PAGES = [], EVENTS = [], TOTAL = 0, INTRO_END = 3.0, OUTRO = 0;
+const AREA = { x0: 650, x1: 1850, y0: 105, y1: 880 };
+
+function splitLabel(s) {
+  if (s.length <= 8) return [s];
+  const w = s.split(' ');
+  if (w.length === 4) return [w[0] + ' ' + w[1], w[2] + ' ' + w[3]];
+  if (w.length === 3) return [w[0], w[1] + ' ' + w[2]];
+  return [w[0], w.slice(1).join(' ')];
+}
+
+function layoutGrid(items) {
+  const n = items.length, rows = n <= 4 ? 1 : 2;
+  const top = Math.ceil(n / rows), counts = rows === 1 ? [n] : [top, n - top];
+  const ch = (AREA.y1 - AREA.y0) / rows;
+  let k = 0;
+  counts.forEach((c, r) => {
+    const cw = (AREA.x1 - AREA.x0) / Math.max(c, rows === 2 ? top : c);
+    const rowW = cw * c, x0 = AREA.x0 + ((AREA.x1 - AREA.x0) - rowW) / 2;
+    for (let j = 0; j < c; j++, k++) {
+      const it = items[k], seed = it.n * 7.3;
+      const s = Math.min(cw * 1.22 / it.w, ch * (rows === 1 ? 0.92 : 1.16) / it.h, 0.95);
+      it.L = { cx: x0 + cw * (j + .5) + (rnd(seed) - .5) * 36, cy: AREA.y0 + ch * (r + .5) + (rnd(seed + 1) - .5) * 30 + (rows === 2 ? (r ? -18 : 18) : 0),
+               s, rot: (rnd(seed + 2) - .5) * 10 };
+    }
+  });
+}
+
+function build() {
+  const groups = [];
+  for (const it of MAN) {
+    const key = it.age || 'Keluarga';
+    let g = groups[groups.length - 1];
+    if (!g || g.key !== key) groups.push(g = { key, items: [] });
+    g.items.push(it);
+  }
+  let t = INTRO_END;
+  const add = p => { p.start = t; PAGES.push(p); t += p.beats * B; };
+  for (const g of groups) {
+    const items = g.items, a = items[0];
+    if (g.key === 'Baru Lahir') {
+      a.L = { cx: (AREA.x0 + AREA.x1) / 2, cy: (AREA.y0 + AREA.y1) / 2 + 10, s: 760 / a.h, rot: -3 };
+      add({ kind: 'hero', label: 'Baru Lahir', key: 'UMUR', m0: 0, m1: 0, items: [a], pops: [1], beats: 5 });
+    } else if (g.key === 'Bawah 7 Bulan') {
+      const flip = items.filter(i => /Meniarap_Di_Pantai/.test(i.src)).sort((x, y) => y.n - x.n);
+      const rest = items.filter(i => !flip.includes(i)), h = Math.ceil(rest.length / 2);
+      for (const part of [rest.slice(0, h), rest.slice(h)]) {
+        layoutGrid(part);
+        add({ kind: 'grid', label: g.key, key: 'UMUR', sub: 'Urutan gambar anggaran', m0: 0, m1: 6.9,
+              items: part, pops: part.map((_, k) => k + 1), beats: Math.max(5, part.length + 3) });
+      }
+      const seq = flip.concat(flip.slice(0, -1).reverse());
+      const hgt = 560;
+      flip.forEach(i => { i.L = { cx: (AREA.x0 + AREA.x1) / 2, cy: (AREA.y0 + AREA.y1) / 2 + 20, s: Math.min(hgt / i.h, 1080 / i.w), rot: -2 }; });
+      add({ kind: 'flip', label: g.key, key: 'UMUR', sub: 'Belajar meniarap di pantai', m0: 0, m1: 6.9, items: flip, seq, beats: 1 + Math.ceil(seq.length / 2) + 2 });
+    } else if (g.key === 'Keluarga') {
+      const [f1, f2] = items;
+      f1.L = { cx: 980, cy: 500, s: 640 / f1.h * 1.0, rot: -3.5 };
+      if (f2) f2.L = { cx: 1560, cy: 500, s: 720 / f2.h, rot: 3 };
+      add({ kind: 'family', label: 'Bersama keluarga', key: 'KENANGAN', m0: 18, m1: 18, items, pops: [1, 3], beats: 8 });
+    } else {
+      layoutGrid(items);
+      add({ kind: 'grid', label: g.key, key: 'UMUR', m0: a.m0, m1: a.m1, items, pops: items.map((_, k) => k + 1),
+            beats: Math.max(5, items.length + 3), confetti: g.key === '1 Tahun' });
+    }
+  }
+  OUTRO = t; TOTAL = t + 8 * B;
+  // label DOM per halaman
+  const lab = document.getElementById('lab'), box = document.getElementById('items');
+  PAGES.forEach((p, i) => {
+    p.end = p.start + p.beats * B;
+    p.exit = p.end - 0.3;
+    const d = document.createElement('div'); d.style.position = 'absolute'; d.style.left = 0; d.style.top = 0; d.style.display = 'none';
+    d.innerHTML = `<div class="k"><span>${p.key}</span></div>` + splitLabel(p.label).map(s => `<div class="ln"><span>${s}</span></div>`).join('') +
+      (p.sub ? `<div class="sub"><span>${p.sub}</span></div>` : '');
+    lab.appendChild(d); p.el = d; p.parts = [...d.querySelectorAll('span')];
+    for (const it of p.items) if (!it.el) {
+      const im = new Image(); im.src = it.file; im.className = 'it'; im.width = it.w; im.height = it.h;
+      box.appendChild(im); it.el = im;
+    }
+    // peristiwa untuk audio
+    EVENTS.push({ t: p.start, type: 'page', i });
+    if (p.kind === 'flip') p.seq.forEach((_, k) => EVENTS.push({ t: p.start + B + k * B / 2, type: k ? 'flip' : 'pop', i }));
+    else p.pops.forEach((b, k) => EVENTS.push({ t: p.start + b * B, type: 'pop', i, k }));
+    if (p.confetti) EVENTS.push({ t: p.start + B, type: 'confetti', i });
+  });
+  EVENTS.push({ t: OUTRO, type: 'outro' });
+  // tajuk huruf demi huruf
+  for (const [id, txt] of [['ib', 'Humaira'], ['ob', 'Humaira']])
+    document.getElementById(id).innerHTML = [...txt].map(c => `<span>${c}</span>`).join('');
+  buildTimeline();
+}
+
+// ---------- garis masa umur (0 - 18 bulan) ----------
+const TL = { x0: 170, x1: 1750, y: 990 };
+const mx = m => TL.x0 + (TL.x1 - TL.x0) * m / 18;
+let tlEls = {};
+function buildTimeline() {
+  const s = document.getElementById('tl'), ns = 'http://www.w3.org/2000/svg';
+  const mk = (tag, at, parent = s) => { const e = document.createElementNS(ns, tag); for (const k in at) e.setAttribute(k, at[k]); parent.appendChild(e); return e; };
+  const g = mk('g', {}); tlEls.g = g;
+  mk('line', { x1: TL.x0, x2: TL.x1, y1: TL.y, y2: TL.y, stroke: '#e9d9da', 'stroke-width': 8, 'stroke-linecap': 'round' }, g);
+  tlEls.fill = mk('line', { x1: TL.x0, x2: TL.x0, y1: TL.y, y2: TL.y, stroke: '#f6a8c0', 'stroke-width': 8, 'stroke-linecap': 'round' }, g);
+  for (let m = 0; m <= 18; m++) {
+    const big = m % 3 === 0;
+    mk('line', { x1: mx(m), x2: mx(m), y1: TL.y - (big ? 18 : 10), y2: TL.y - 6, stroke: '#cdb7bf', 'stroke-width': big ? 3 : 2, 'stroke-linecap': 'round' }, g);
+    if (big) { const t = mk('text', { x: mx(m), y: TL.y + 44, 'text-anchor': 'middle', fill: '#8a7385', 'font-family': 'Nunito', 'font-weight': 800, 'font-size': 24 }, g);
+      t.textContent = m === 0 ? 'Lahir' : m === 12 ? '1 thn' : m === 18 ? '18 bln' : m; }
+  }
+  tlEls.pill = mk('rect', { x: TL.x0, y: TL.y - 14, width: 28, height: 28, rx: 14, fill: '#e8628e' }, g);
+  tlEls.ring = mk('rect', { x: TL.x0, y: TL.y - 14, width: 28, height: 28, rx: 14, fill: 'none', stroke: '#e8628e', 'stroke-width': 3 }, g);
+}
+function rangeAt(t) {
+  let cur = null, prev = null;
+  for (const p of PAGES) { if (p.start <= t) { prev = cur; cur = p; } }
+  if (!cur) return null;
+  const k = easeIO(clamp((t - cur.start) / 0.7));
+  const a = prev ? prev : cur;
+  return [lerp(a.m0, cur.m0, k), lerp(a.m1, cur.m1, k), t - cur.start];
+}
+function drawTimeline(t) {
+  const vis = clamp((t - 2.6) / 0.5) * (1 - clamp((t - OUTRO - 2.2) / 0.6));
+  tlEls.g.setAttribute('opacity', vis);
+  tlEls.g.setAttribute('transform', `translate(0 ${(1 - easeOut(clamp((t - 2.6) / 0.5))) * 40})`);
+  let r = rangeAt(t) || [0, 0, 0];
+  if (t >= OUTRO) { const k = easeIO(clamp((t - OUTRO) / 1.2)); r = [lerp(18, 0, k), 18, 9]; }
+  const x0 = mx(r[0]) - 14, x1 = mx(r[1]) + 14;
+  tlEls.pill.setAttribute('x', x0); tlEls.pill.setAttribute('width', x1 - x0);
+  tlEls.pill.setAttribute('fill', r[1] - r[0] > 1 ? '#f39bb7' : '#e8628e');
+  tlEls.fill.setAttribute('x2', mx(r[1]));
+  // denyut cincin bila halaman baru bermula
+  const pk = clamp(r[2] / 0.9), sc = 1 + pk * 0.9;
+  const cx = (x0 + x1) / 2, w = (x1 - x0) * sc + 0, h = 28 * sc;
+  tlEls.ring.setAttribute('x', cx - w / 2); tlEls.ring.setAttribute('width', w);
+  tlEls.ring.setAttribute('y', TL.y - h / 2); tlEls.ring.setAttribute('height', h); tlEls.ring.setAttribute('rx', h / 2);
+  tlEls.ring.setAttribute('opacity', (1 - pk) * 0.8);
+}
+
+// ---------- latar ----------
+const bg = document.getElementById('bg').getContext('2d');
+const BLOBS = [[300, 220, 520, '#ffd9c9'], [1620, 180, 480, '#e6dcf6'], [1500, 880, 560, '#d6ecf9'], [260, 900, 460, '#d9f1e3'], [960, 560, 620, '#ffe7ef']];
+function drawBg(t) {
+  bg.fillStyle = '#fff7ee'; bg.fillRect(0, 0, W, H);
+  BLOBS.forEach(([x, y, r, c], i) => {
+    const X = x + Math.sin(t * .23 + i * 1.7) * 60, Y = y + Math.cos(t * .19 + i * 2.3) * 40, R = r * (1 + .06 * Math.sin(t * .31 + i));
+    const g = bg.createRadialGradient(X, Y, 0, X, Y, R); g.addColorStop(0, c + 'cc'); g.addColorStop(1, c + '00');
+    bg.fillStyle = g; bg.fillRect(0, 0, W, H);
+  });
+  // titik-titik kecil berulang (tetap, tanpa rawak semasa)
+  bg.fillStyle = 'rgba(232,98,142,0.07)';
+  for (let i = 0; i < 60; i++) {
+    const x = rnd(i) * W, y = (rnd(i + 99) * H + t * (8 + rnd(i + 7) * 14)) % H, r = 3 + rnd(i + 3) * 6;
+    bg.beginPath(); bg.arc(x, y, r, 0, 7); bg.fill();
+  }
+}
+
+// ---------- konfeti ----------
+const fx = document.getElementById('fx').getContext('2d');
+const CONF = Array.from({ length: 110 }, (_, i) => ({
+  x: 1250 + (rnd(i + 500) - .5) * 300, y: 520, vx: (rnd(i + 600) - .5) * 1500, vy: -600 - rnd(i + 700) * 900,
+  r: rnd(i + 800) * 6, vr: (rnd(i + 900) - .5) * 14, c: ['#e8628e', '#f6c343', '#6cc4a1', '#7aa8f0', '#b28df0', '#ff9a6b'][i % 6], w: 10 + rnd(i) * 10, h: 6 + rnd(i + 1) * 6 }));
+function drawFx(t) {
+  fx.clearRect(0, 0, W, H);
+  for (const e of EVENTS) if (e.type === 'confetti') {
+    const tt = t - e.t; if (tt < 0 || tt > 3.2) continue;
+    for (const p of CONF) {
+      const drag = (1 - Math.exp(-1.6 * tt)) / 1.6;
+      const x = p.x + p.vx * drag, y = p.y + p.vy * drag + 0.5 * 900 * tt * tt * 0.6;
+      if (y > H + 30) continue;
+      fx.save(); fx.translate(x, y); fx.rotate(p.r + p.vr * tt); fx.scale(1, Math.cos(tt * 8 + p.r));
+      fx.globalAlpha = 1 - clamp((tt - 2.4) / 0.8); fx.fillStyle = p.c; fx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); fx.restore();
+    }
+  }
+}
+
+// ---------- item & label ----------
+function place(it, t, tp, k, p) {
+  const L = it.L, el = it.el;
+  if (tp < 0) { el.style.display = 'none'; return; }
+  const s = spring(tp), sign = k % 2 ? 1 : -1;
+  let x = L.cx, y = L.cy + (1 - s) * 80 + Math.sin(t * 1.4 + it.n) * 4, sc = L.s * (0.5 + 0.5 * s), rot = L.rot + (1 - s) * 16 * sign, op = clamp(tp / 0.1);
+  if (p) {
+    const te = t - (p.exit + k * 0.035);
+    if (te > 0) { const e = easeIn(clamp(te / 0.42)); x -= 360 * e; sc *= 1 - 0.18 * e; op *= 1 - e; rot -= 6 * e; }
+  }
+  if (op <= 0.001) { el.style.display = 'none'; return; }
+  el.style.display = 'block'; el.style.opacity = op; el.style.zIndex = 10 + k;
+  el.style.transform = `translate(${x - it.w / 2}px, ${y - it.h / 2}px) rotate(${rot}deg) scale(${sc})`;
+}
+function drawLabel(p, t) {
+  const tp = t - p.start;
+  if (tp < -0.1 || t > p.end + 0.3) { p.el.style.display = 'none'; return; }
+  p.el.style.display = 'block';
+  p.parts.forEach((sp, i) => {
+    const a = spring(tp - i * 0.07, 1.8, .7);
+    const e = easeIn(clamp((t - p.exit - i * 0.04) / 0.35));
+    sp.style.transform = `translateY(${(1 - a) * 110 - e * 110}%)`;
+  });
+}
+function drawTitle(id, t0, t1, t) {
+  const el = document.getElementById(id), spans = el.querySelectorAll('.big span'), sub = el.querySelector('.s span');
+  const on = t >= t0 - 0.1 && t <= t1 + 0.6; el.style.display = on ? 'block' : 'none'; if (!on) return;
+  spans.forEach((sp, i) => {
+    const a = spring(t - t0 - i * 0.06, 2.0, .5), e = easeIn(clamp((t - t1 - i * 0.03) / 0.4));
+    sp.style.transform = `translateY(${(1 - a) * 120 - e * 160}px) scale(${0.6 + 0.4 * a}) rotate(${(1 - a) * (i % 2 ? 10 : -10)}deg)`;
+    sp.style.opacity = clamp((t - t0 - i * 0.06) / 0.12) * (1 - e);
+  });
+  const a = spring(t - t0 - 0.55, 1.6, .75), e = easeIn(clamp((t - t1) / 0.4));
+  sub.style.transform = `translateY(${(1 - a) * 100 - e * 100}%)`;
+}
+
+function seek(t) {
+  drawBg(t);
+  drawTitle('intro', 0.35, INTRO_END - 0.45, t);
+  drawTitle('outro', OUTRO + 0.4, TOTAL + 5, t);
+  for (const p of PAGES) {
+    drawLabel(p, t);
+    if (p.kind === 'flip') {
+      const k = Math.floor((t - p.start - B) / (B / 2));
+      const show = k >= 0 && t < p.end + 0.5 ? p.seq[Math.min(k, p.seq.length - 1)] : null;
+      for (const it of p.items) {
+        if (it !== show) { it.el.style.display = 'none'; continue; }
+        const tp = t - p.start - B;
+        place(it, t, k === 0 ? tp : 1, 0, p);
+      }
+    } else {
+      p.items.forEach((it, k) => place(it, t, t - (p.start + p.pops[k] * B), k, p));
+    }
+  }
+  drawTimeline(t);
+  drawFx(t);
+  const tag = document.getElementById('tag'); tag.style.opacity = 0.8 * clamp((t - 2.8) / 0.5) * (1 - clamp((t - OUTRO) / 0.5));
+  document.getElementById('flash').style.opacity = clamp((t - TOTAL + 0.8) / 0.8);
+}
+
+window.ready = (async () => {
+  MAN = await (await fetch('assets/manifest.json')).json();
+  build();
+  await document.fonts.ready;
+  await Promise.all([...document.querySelectorAll('img')].map(i => i.decode().catch(() => 0)));
+  seek(0);
+  return { total: TOTAL, outro: OUTRO, pages: PAGES.length, events: EVENTS };
+})();
+</script>
+</body>
+</html>

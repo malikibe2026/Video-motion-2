@@ -10,3 +10,11 @@ examples/*/probe/
 examples/*/out/
 __pycache__/
 .DS_Store
+# humaira-tumbesaran: gambar peribadi & output tidak di-commit
+examples/humaira-tumbesaran/src/assets/
+examples/humaira-tumbesaran/src/fr/
+examples/humaira-tumbesaran/src/probe/
+examples/humaira-tumbesaran/src/*.wav
+examples/humaira-tumbesaran/src/*.mp4
+examples/humaira-tumbesaran/src/*.log
+examples/humaira-tumbesaran/src/schedule.json
