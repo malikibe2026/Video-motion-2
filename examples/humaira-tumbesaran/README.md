@@ -2,7 +2,7 @@
 
 Video montaj 1920×1080, 30 fps, kira-kira 73 saat, 120 BPM. Ia menggunakan 78 ilustrasi kartun berlatar telus daripada folder Drive `Humaira_Kartun_Tersusun`.
 
-**Repo ini hanya menyimpan kod.** Gambar kartun, video siap dan fail audio tidak di-commit kerana ia gambar peribadi kanak-kanak. Semua fail itu tersenarai dalam `.gitignore`.
+**Repo ini hanya menyimpan kod.** Gambar kartun, video siap, fail audio serta nama penuh dan tarikh lahir (`assets/info.json`) tidak di-commit kerana ia maklumat peribadi kanak-kanak. Semua fail itu tersenarai dalam `.gitignore`. Tanpa `info.json`, tajuk memaparkan "Humaira" sahaja.
 
 ## Struktur video
 | Bahagian | Isi |
@@ -30,6 +30,11 @@ python3 prepare.py /laluan/ke/Humaira_Kartun_Tersusun    # pelekat + assets/mani
 mkdir -p assets/fonts && cd assets/fonts \
   && npm pack @fontsource/fredoka@5.0.12 @fontsource/nunito@5.0.17 \
   && for f in *.tgz; do tar xzf "$f" && cp package/files/{fredoka,nunito}-latin-*-normal.woff2 . 2>/dev/null; rm -rf package "$f"; done && cd ../..
+# pilihan: nama & tarikh lahir untuk tajuk (fail ini tidak di-commit)
+cat > assets/info.json <<'EOF'
+{"nama": "Nama Panggilan", "intro_sub": "Lahir 1 Januari 2025",
+ "outro_sub1": "Nama penuh", "outro_sub2": "Lahir 1 Januari 2025 · 78 ilustrasi kartun · 18 bulan kenangan"}
+EOF
 python3 -m http.server 8767 --bind 127.0.0.1 &
 node render.js schedule              # schedule.json: masa setiap peristiwa
 node render.js probe 5,20,41,68      # gambar pegun untuk semakan

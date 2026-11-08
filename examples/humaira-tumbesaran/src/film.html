@@ -27,6 +27,7 @@ canvas { position: absolute; inset: 0; }
 .ttl .big span { display: inline-block; }
 .ttl .s { margin-top: 26px; font: 700 40px/1.2 Nunito; color: var(--soft); overflow: hidden; height: 52px; }
 .ttl .s span { display: inline-block; }
+.ttl .s2 { margin-top: 8px; font-size: 30px; line-height: 1.5; height: 48px; }
 .tag { position: absolute; right: 44px; top: 36px; font: 700 20px/1 Nunito; letter-spacing: .08em; color: var(--soft); opacity: .8; }
 #flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
 </style>
@@ -39,7 +40,7 @@ canvas { position: absolute; inset: 0; }
   <svg id="tl" viewBox="0 0 1920 1080"></svg>
   <canvas id="fx" width="1920" height="1080"></canvas>
   <div class="ttl" id="intro" style="top:330px"><div class="big" id="ib"></div><div class="s"><span id="is">Baru lahir hingga 1 tahun 6 bulan</span></div></div>
-  <div class="ttl" id="outro" style="top:300px"><div class="big" id="ob"></div><div class="s"><span id="os">78 ilustrasi kartun · 18 bulan kenangan</span></div></div>
+  <div class="ttl" id="outro" style="top:290px"><div class="big" id="ob"></div><div class="s"><span id="os"></span></div><div class="s s2"><span id="os2"></span></div></div>
   <div class="tag" id="tag">ILUSTRASI KARTUN</div>
   <div id="flash"></div>
 </div>
@@ -58,7 +59,7 @@ function spring(t, f = 2.2, z = .55) {           // tindak balas langkah, bentuk
 }
 function rnd(i) { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
 
-let MAN, PAGES = [], EVENTS = [], TOTAL = 0, INTRO_END = 3.0, OUTRO = 0;
+let INFO, MAN, PAGES = [], EVENTS = [], TOTAL = 0, INTRO_END = 3.0, OUTRO = 0;
 const AREA = { x0: 650, x1: 1850, y0: 105, y1: 880 };
 
 function splitLabel(s) {
@@ -146,8 +147,12 @@ function build() {
   });
   EVENTS.push({ t: OUTRO, type: 'outro' });
   // tajuk huruf demi huruf
-  for (const [id, txt] of [['ib', 'Humaira'], ['ob', 'Humaira']])
-    document.getElementById(id).innerHTML = [...txt].map(c => `<span>${c}</span>`).join('');
+  // nama & tarikh lahir dibaca dari assets/info.json (tidak di-commit); lalai "Humaira"
+  for (const [id, txt] of [['ib', INFO.nama], ['ob', INFO.nama]])
+    document.getElementById(id).innerHTML = [...txt].map(c => `<span>${c === ' ' ? '&nbsp;' : c}</span>`).join('');
+  document.getElementById('is').textContent = INFO.intro_sub;
+  document.getElementById('os').textContent = INFO.outro_sub1;
+  document.getElementById('os2').textContent = INFO.outro_sub2;
   buildTimeline();
 }
 
@@ -189,8 +194,8 @@ function drawTimeline(t) {
   tlEls.pill.setAttribute('fill', r[1] - r[0] > 1 ? '#f39bb7' : '#e8628e');
   tlEls.fill.setAttribute('x2', mx(r[1]));
   // denyut cincin bila halaman baru bermula
-  const pk = clamp(r[2] / 0.9), sc = 1 + pk * 0.9;
-  const cx = (x0 + x1) / 2, w = (x1 - x0) * sc + 0, h = 28 * sc;
+  const pk = clamp(r[2] / 0.9);
+  const cx = (x0 + x1) / 2, w = (x1 - x0) + 25 * pk, h = 28 + 25 * pk;
   tlEls.ring.setAttribute('x', cx - w / 2); tlEls.ring.setAttribute('width', w);
   tlEls.ring.setAttribute('y', TL.y - h / 2); tlEls.ring.setAttribute('height', h); tlEls.ring.setAttribute('rx', h / 2);
   tlEls.ring.setAttribute('opacity', (1 - pk) * 0.8);
@@ -258,15 +263,17 @@ function drawLabel(p, t) {
   });
 }
 function drawTitle(id, t0, t1, t) {
-  const el = document.getElementById(id), spans = el.querySelectorAll('.big span'), sub = el.querySelector('.s span');
+  const el = document.getElementById(id), spans = el.querySelectorAll('.big span'), subs = el.querySelectorAll('.s span');
   const on = t >= t0 - 0.1 && t <= t1 + 0.6; el.style.display = on ? 'block' : 'none'; if (!on) return;
   spans.forEach((sp, i) => {
     const a = spring(t - t0 - i * 0.06, 2.0, .5), e = easeIn(clamp((t - t1 - i * 0.03) / 0.4));
     sp.style.transform = `translateY(${(1 - a) * 120 - e * 160}px) scale(${0.6 + 0.4 * a}) rotate(${(1 - a) * (i % 2 ? 10 : -10)}deg)`;
     sp.style.opacity = clamp((t - t0 - i * 0.06) / 0.12) * (1 - e);
   });
-  const a = spring(t - t0 - 0.55, 1.6, .75), e = easeIn(clamp((t - t1) / 0.4));
-  sub.style.transform = `translateY(${(1 - a) * 100 - e * 100}%)`;
+  subs.forEach((sub, j) => {
+    const a = spring(t - t0 - 0.75 - j * 0.18, 1.6, .75), e = easeIn(clamp((t - t1 - j * 0.05) / 0.4));
+    sub.style.transform = `translateY(${(1 - a) * 100 - e * 100}%)`;
+  });
 }
 
 function seek(t) {
@@ -295,6 +302,8 @@ function seek(t) {
 
 window.ready = (async () => {
   MAN = await (await fetch('assets/manifest.json')).json();
+  INFO = { nama: 'Humaira', intro_sub: 'Baru lahir hingga 1 tahun 6 bulan', outro_sub1: '78 ilustrasi kartun · 18 bulan kenangan', outro_sub2: '' };
+  try { Object.assign(INFO, await (await fetch('assets/info.json')).json()); } catch (e) {}
   build();
   await document.fonts.ready;
   await Promise.all([...document.querySelectorAll('img')].map(i => i.decode().catch(() => 0)));
