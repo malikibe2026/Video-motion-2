@@ -32,6 +32,13 @@ ffmpeg -framerate 30 -i fr2/f%05d.png -i cerita_mix.wav -c:v libx264 -crf 18 -pr
 
 `info.json` untuk versi 2 juga memerlukan `nama_penuh`, `lahir` dan `setahun` (cth. `"setahun": "1 Januari 2026"`).
 
+### Versi tegak 9:16: `src/cerita916.html`
+Cerita, masa dan muzik sama (guna `cerita_mix.wav`), disusun semula untuk 1080×1920. Polaroid dan laluan tapak kaki bergerak ke bawah, panel 7 bulan menjadi grid 2×2, dan nama dipaparkan dalam dua baris.
+```sh
+FILM=cerita916.html VW=1080 VH=1920 node render.js full fr3 0 3375
+```
+Untuk WhatsApp Status (maksimum 60 s), video dipecah kepada dua bahagian pada sempadan bab "Genap setahun" (53.1 s).
+
 ## Versi 1: `src/film.html`, montaj 73 saat
 Versi pertama dibuat sebelum pembetulan umur. Selepas `prepare.py` dikemas kini, versi ini tidak lagi memaparkan flipbook pantai di bahagian "Bawah 7 Bulan".
 

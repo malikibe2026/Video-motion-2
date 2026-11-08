@@ -11,7 +11,8 @@ const FPS = 30, FILM = process.env.FILM || 'film.html', URL = 'http://127.0.0.1:
 const SCHED = FILM === 'film.html' ? 'schedule.json' : FILM.replace('.html', '_schedule.json');
 (async () => {
   const browser = await pw.chromium.launch({ args: ['--font-render-hinting=none', '--force-color-profile=srgb'] });
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  const VW = +(process.env.VW || 1920), VH = +(process.env.VH || 1080);
+  const page = await browser.newPage({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1 });
   page.on('pageerror', e => console.log('PAGEERROR', e.message));
   await page.goto(URL);
   const info = await page.evaluate(() => window.ready);
