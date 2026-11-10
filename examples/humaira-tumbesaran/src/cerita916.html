@@ -471,8 +471,15 @@ def({ name: 'keluarga', beats: 12, tin: ['fade', 1.0], cap: 'Membesar dalam daka
     S.rays = h('div', 'abs', S.el, 'left:-1460px;top:-2000px;width:4000px;height:4000px;background:repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,.32) 0deg 7deg, rgba(255,255,255,0) 7deg 18deg)');
     S.sv = s('svg', { width: 1080, height: 1920, class: 'abs' }, S.el);
     S.hearts = Array.from({ length: 18 }, (_, i) => ({ p: s('path', { d: 'M0 8 C -14 -6 -30 10 0 32 C 30 10 14 -6 0 8 Z', fill: ['#f58fae', '#ffb3c7', '#ff9a9a'][i % 3], opacity: .7 }, S.sv), x: rnd(i + 200) * 1080, d: rnd(i + 201) * 7, v: 80 + rnd(i + 202) * 90, sc: .8 + rnd(i + 203) * 1.4 }));
-    const fam = G['Keluarga'] || [];
-    S.items = fam.map((it, k) => { const pop = (k ? 4.5 : 2) * B; EV.push({ t: S.t0 + pop, type: 'pop', k }); return { it, im: img(it, S.el), pop, x: 540, y: k ? 1250 : 640, hh: k ? 760 : 560, ww: k ? 700 : 900, r: k ? 3 : -3, from: k ? 1 : -1 }; });
+    // kartun keluarga + gambar foto sebenar (INFO.foto_keluarga, dalam bingkai)
+    const fam = (G['Keluarga'] || []).map(it => ({ it, el: img(it, S.el) }));
+    (INFO.foto_keluarga || []).forEach(f => {
+      const iw = 820, ih = Math.round(iw * f.h / f.w), fr = h('div', 'abs', S.el, 'padding:16px;background:#fff;border-radius:12px;box-shadow:0 20px 40px rgba(80,40,40,.25);transform-origin:50% 55%');
+      const im = h('img', '', fr, `display:block;width:${iw}px;height:${ih}px;border-radius:4px`); im.src = f.file;
+      fam.push({ it: { w: iw + 32, h: ih + 32 }, el: fr, photo: true });
+    });
+    S.items = fam.map((o, k) => { const pop = (k ? 4.5 : 2) * B; EV.push({ t: S.t0 + pop, type: 'pop', k });
+      return { it: o.it, im: o.el, pop, x: 540, y: k ? 1240 : 640, hh: o.photo ? o.it.h : (k ? 760 : 560), ww: o.photo ? o.it.w : (k ? 700 : 900), r: k ? 3 : -3, from: k ? 1 : -1 }; });
   },
   draw(S, lt) {
     S.rays.style.transform = `rotate(${lt * 6}deg)`;
@@ -519,7 +526,7 @@ function buildAll() {
     if (i) EV.push({ t: S.t0, type: 'trans', kind: d.tin[0] });
     if (d.cap) {                                   // sarikata cerita
       const cap = h('div', 'cap', document.getElementById('caps')), pill = h('div', 'pill', cap);
-      S.capEl = cap; S.pill = pill; if (d.capTop) { cap.style.bottom = 'auto'; cap.style.top = '230px'; } S.words = d.cap.split(' ').map(w => h('span', 'w', pill, '', w + '&nbsp;'));
+      S.capEl = cap; S.pill = pill; if (d.capTop) { cap.style.bottom = 'auto'; cap.style.top = '230px'; } S.words = (INFO['cap_' + d.name] || d.cap).split(' ').map(w => h('span', 'w', pill, '', w + '&nbsp;'));
     }
     (d.ages || []).forEach(([b, lab, m0, m1]) => AGES.push({ t: S.t0 + b * B, lab, m0, m1 }));
   });
@@ -609,13 +616,15 @@ function seek(t) {
   applyTrans(t);
   SC.forEach((S, i) => { if (S.el.style.display !== 'none') S.def.draw(S, t - S.t0); });
   drawOverlay(t);
-  document.getElementById('tag').style.opacity = clamp((t - 6) / .5) * (1 - clamp((t - SC[SC.length - 1].t0) / .5));
+  const fs = SC.find(S => S.def.name === 'keluarga') || SC[SC.length - 1];   // tanda kartun disorok bila foto sebenar dipapar
+  document.getElementById('tag').style.opacity = clamp((t - 6) / .5) * (1 - clamp((t - fs.t0) / .5));
 }
 
 window.ready = (async () => {
   MAN = await (await fetch('assets/manifest.json')).json();
   INFO = { nama: 'Humaira', nama_penuh: '', lahir: '', setahun: '' };
   try { Object.assign(INFO, await (await fetch('assets/info.json')).json()); } catch (e) {}
+  if (INFO.buang) MAN = MAN.filter(it => !INFO.buang.includes(it.n));      // gambar yang dibuang pengguna
   buildAll();
   await document.fonts.ready;
   await Promise.all([...document.querySelectorAll('img')].map(i => i.decode().catch(() => 0)));
