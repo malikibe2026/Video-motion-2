@@ -32,12 +32,30 @@ ffmpeg -framerate 30 -i fr2/f%05d.png -i cerita_mix.wav -c:v libx264 -crf 18 -pr
 
 `info.json` untuk versi 2 juga memerlukan `nama_penuh`, `lahir` dan `setahun` (cth. `"setahun": "1 Januari 2026"`).
 
-### Versi tegak 9:16: `src/cerita916.html`
-Cerita, masa dan muzik sama (guna `cerita_mix.wav`), disusun semula untuk 1080×1920. Polaroid dan laluan tapak kaki bergerak ke bawah, panel 7 bulan menjadi grid 2×2, dan nama dipaparkan dalam dua baris.
+### Versi tegak 9:16 (paling terkini): `src/cerita916.html`
+Versi 1080×1920 untuk telefon dan WhatsApp Status, dengan 12 bab dan masa yang sama seperti versi melintang. Ia versi yang paling digilap:
+
+- **Motion blur sebenar:** bingkai dalam tetingkap peralihan dirender sebagai 4 subbingkai (pengatup 180°) dan digabung oleh `blend.py`.
+- **Pembukaan:** 12 gambar kecil muncul mengelilingi tajuk.
+- **Hari pertama:** mainan gantung berayun dan cap tarikh bulat.
+- **8 bulan:** setiap gambar tampil besar, kemudian terbang ke jalur filem di bawah.
+- **Genap setahun:** angka "1" menjadi lilin dengan api berkelip.
+- **Laluan tapak kaki:** kamera menjejak ke bawah, papan tanda bagi setiap bulan, bunga di tepi laluan.
+- **Pantai:** sinar matahari berputar, kilauan laut, daun kelapa berayun, bola terapung.
+- **Keluarga:** kartun dan foto sebenar dalam bingkai (`foto_keluarga` dalam `info.json`).
+- **Sarikata:** kata bertanda `*` diserlah dengan penanda kuning. Sarikata boleh ditukar melalui `cap_<nama bab>` dalam `info.json`.
+- **Muzik (`audio916.py`):** dram lembut dan susunan ikut bab.
+
 ```sh
-FILM=cerita916.html VW=1080 VH=1920 node render.js full fr3 0 3375
+export FILM=cerita916.html VW=1080 VH=1920 SUB=4
+node render.js schedule                 # cerita916_schedule.json
+node render.js full fr3 0 3375          # bingkai; yang bermotion blur ke fr3_sub/
+python3 blend.py fr3                    # gabung subbingkai
+python3 audio916.py                     # cerita916_mix.wav
+ffmpeg -framerate 30 -i fr3/f%05d.png -i cerita916_mix.wav -c:v libx264 -crf 19 -preset slow -pix_fmt yuv420p \
+  -af loudnorm=I=-14:TP=-1.5:LRA=11 -c:a aac -b:a 192k -shortest cerita916.mp4
 ```
-Untuk WhatsApp Status (maksimum 60 s), video dipecah kepada dua bahagian pada sempadan bab "Genap setahun" (53.1 s).
+`info.json` juga menerima `buang` (senarai nombor gambar yang tidak dipaparkan). Untuk WhatsApp Status (maksimum 60 s), video dipecah kepada dua bahagian pada sempadan bab "Genap setahun" (53.1 s).
 
 ## Versi 1: `src/film.html`, montaj 73 saat
 Versi pertama dibuat sebelum pembetulan umur. Selepas `prepare.py` dikemas kini, versi ini tidak lagi memaparkan flipbook pantai di bahagian "Bawah 7 Bulan".

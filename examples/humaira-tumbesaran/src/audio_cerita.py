@@ -10,7 +10,7 @@ S = json.load(open('cerita_schedule.json'))
 SR, BEAT = 48000, 60 / 96
 T = S['total'] + 0.3
 N = int(SR * T); t = np.arange(N) / SR
-rng = np.random.default_rng(13022025)
+rng = np.random.default_rng(20261108)
 scene = {name: (a, b) for name, a, b in S['scenes']}
 hz = lambda m: 440 * 2 ** ((m - 69) / 12)
 CH = [[53, 57, 60], [48, 52, 55], [50, 53, 57], [46, 50, 53]]     # F C Dm Bb
