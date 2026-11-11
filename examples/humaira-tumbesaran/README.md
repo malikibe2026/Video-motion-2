@@ -55,6 +55,12 @@ python3 audio916.py                     # cerita916_mix.wav
 ffmpeg -framerate 30 -i fr3/f%05d.png -i cerita916_mix.wav -c:v libx264 -crf 19 -preset slow -pix_fmt yuv420p \
   -af loudnorm=I=-14:TP=-1.5:LRA=11 -c:a aac -b:a 192k -shortest cerita916.mp4
 ```
+**Muzik daripada lagu sebenar (`audio_lagu.py`):** letak `assets/lagu/latar.mp3` dan `assets/lagu/birthday.mp3` (tidak di-commit, hak cipta pemiliknya), kemudian jalankan `python3 audio_lagu.py` untuk menghasilkan `cerita916_lagu.wav`.
+- Lagu latar dimainkan dari awal hingga bab "Genap setahun".
+- Lagu hari jadi dimainkan sepanjang bab itu sahaja.
+- Lagu latar kemudian disambung semula, dengan titik sambung dipilih supaya korus (`KORUS`) jatuh tepat pada bab pantai.
+- Kesan bunyi bernada tidak digunakan supaya tidak bertembung dengan kunci lagu.
+
 `info.json` juga menerima `buang` (senarai nombor gambar yang tidak dipaparkan). Untuk WhatsApp Status (maksimum 60 s), video dipecah kepada dua bahagian pada sempadan bab "Genap setahun" (53.1 s).
 
 ## Versi 1: `src/film.html`, montaj 73 saat
