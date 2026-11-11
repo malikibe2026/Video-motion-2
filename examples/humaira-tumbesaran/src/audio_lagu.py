@@ -3,16 +3,15 @@
 Guna: python3 audio_lagu.py   (perlukan cerita916_schedule.json dan assets/lagu/*.mp3)
 - assets/lagu/latar.mp3    : lagu latar keseluruhan video
 - assets/lagu/birthday.mp3 : lagu hari jadi, hanya sepanjang bab 'setahun'
-Selepas bab 'setahun', lagu latar disambung semula. Titik sambung dipilih supaya
-korus lagu latar (KORUS saat dalam lagu) jatuh tepat pada permulaan bab 'pantai'.
+Lagu latar dianjak supaya saat LIRIK jatuh tepat ketika gambar bayi baru lahir muncul.
+Selepas bab 'setahun', lagu latar disambung dari titik ia berhenti.
 Fail lagu tidak di-commit (hak cipta pemiliknya). Hasil: cerita916_lagu.wav
 """
 import json, subprocess, wave
 import numpy as np
 
 SR = 48000
-LATAR_MULA = 0.8      # saat dalam lagu latar tempat bunyi bermula
-KORUS = 80.0          # saat dalam lagu latar tempat korus pertama bermula
+LIRIK = 87.0          # saat dalam lagu latar: lirik yang mesti jatuh ketika gambar bayi baru lahir muncul
 BDAY_MULA = 2.9       # saat dalam lagu hari jadi; muziknya bermula 3.2 s, jatuh pada puncak kilat
 XF = .45              # tempoh silang pudar (s)
 S = json.load(open('cerita916_schedule.json'))
@@ -44,15 +43,17 @@ def fade(a, b, x0, x1):               # sampul licin a->b antara x0..x1 (masa vi
 rms = lambda y: float(np.sqrt((y ** 2).mean())) + 1e-9
 
 latar, bday = load('assets/lagu/latar.mp3'), load('assets/lagu/birthday.mp3')
-s0, s1 = sc['setahun']; p0 = sc['pantai'][0]
-resume = KORUS - (p0 - s1)
+s0, s1 = sc['setahun']
+baby = min(e['t'] for e in S['events'] if e['type'] == 'pop' and e['t'] >= sc['lahir'][0])
+LATAR_MULA = LIRIK - baby            # lagu bermula di sini pada saat 0 video
+resume = LATAR_MULA + s0             # selepas bab setahun, sambung dari titik lagu berhenti
 
 A = place(seg(latar, LATAR_MULA, s0 + XF), 0)                          # awal -> setahun
 Bd = place(seg(bday, BDAY_MULA - .1, s1 - s0 + .1 + XF), s0 - .1)      # hari jadi
 C = place(seg(latar, resume - XF, T - s1 + XF), s1 - XF)               # latar disambung
 
-gB = rms(latar[int(20 * SR):int(54 * SR)]) / rms(bday[int(3.2 * SR):int(11 * SR)]) * 1.45   # hari jadi sedikit lebih kuat daripada verse
-eA = fade(1, 0, s0 - .15, s0 + XF - .1)
+gB = rms(A[int(8 * SR):int(s0 * SR)]) / rms(bday[int(3.2 * SR):int(11 * SR)]) * 1.45   # hari jadi sedikit lebih kuat daripada verse
+eA = fade(0, 1, 0, 1.6) * fade(1, 0, s0 - .15, s0 + XF - .1)
 eB = fade(0, 1, s0 - .1, s0 + .05) * fade(1, 0, s1 - .2, s1 + XF)
 eC = fade(0, 1, s1 - .25, s1 + XF) * fade(1, 0, T - 3.6, T - .15)
 music = A * eA[:, None] + Bd * (eB * gB)[:, None] + C * eC[:, None]
@@ -106,4 +107,4 @@ mix = mix / max(1e-9, np.abs(mix).max()) * .92
 w = wave.open('cerita916_lagu.wav', 'wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
 w.writeframes((np.clip(mix, -1, 1) * 32767).astype('<i2').tobytes()); w.close()
 print(f'ok {T:.2f}s | latar {LATAR_MULA}-{LATAR_MULA + s0:.1f}s | hari jadi {BDAY_MULA}-{BDAY_MULA + s1 - s0:.1f}s '
-      f'pada video {s0:.2f}-{s1:.2f}s | latar disambung dari {resume:.2f}s, korus pada video {p0:.2f}s')
+      f'pada video {s0:.2f}-{s1:.2f}s | lirik {LIRIK}s pada video {baby:.3f}s | latar disambung dari {resume:.2f}s')
