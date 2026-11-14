@@ -219,15 +219,15 @@ K.stickers = {   // stiker ditampal: diangkat, kemudian ditekan ke kertas
     });
   }
 };
-K.postcard = {   // poskad pantai bersetem + barisan polaroid kecil
+K.postcard = {   // poskad bersetem + barisan polaroid kecil
   build(S) {
     S.pc = box(S.layer, 940, 640, 'card', '', 'background:#FFFDF6');
     fitImg(S.pc, S.imgs[0], 26, 26, 440, 582);
     el('div', 'abs', S.pc, '', 'left:486px;top:40px;width:3px;height:560px;background:#2D2D2D;opacity:.25');
     el('div', 'q abs', S.pc, 'Kepada:<br>Ummi &amp; Abah', 'left:520px;top:300px;font-size:40px');
     for (let k = 0; k < 3; k++) el('div', 'abs', S.pc, '', 'left:520px;top:' + (430 + k * 60) + 'px;width:370px;border-bottom:3px dashed #2D2D2D;opacity:.4');
-    el('div', 'abs', S.pc, '<svg width="140" height="170"><rect x="4" y="4" width="132" height="162" rx="10" fill="#A8D8F0" stroke="#2D2D2D" stroke-width="4" stroke-dasharray="10 6"/><circle cx="96" cy="56" r="22" fill="#FDE68A" stroke="#2D2D2D" stroke-width="3"/><path d="M14 120 Q 40 100 70 120 T 126 120" fill="none" stroke="#2D2D2D" stroke-width="4"/><path d="M14 142 Q 40 122 70 142 T 126 142" fill="none" stroke="#2D2D2D" stroke-width="4"/></svg>', 'left:770px;top:40px');
-    S.mark = el('div', 'abs', S.pc, '<div style="width:190px;height:190px;border:5px solid #F8635F;border-radius:50%;color:#F8635F;text-align:center;font:38px/190px FO;letter-spacing:.06em">PANTAI</div>', 'left:640px;top:70px');
+    el('div', 'abs', S.pc, '<svg width="140" height="170"><rect x="4" y="4" width="132" height="162" rx="10" fill="#A8D8F0" stroke="#2D2D2D" stroke-width="4" stroke-dasharray="10 6"/><circle cx="96" cy="56" r="22" fill="#FDE68A" stroke="#2D2D2D" stroke-width="3"/><path d="M70 150 C 28 124 40 92 70 112 C 100 92 112 124 70 150 Z" fill="#F8635F" stroke="#2D2D2D" stroke-width="4" stroke-linejoin="round"/></svg>', 'left:770px;top:40px');
+    S.mark = el('div', 'abs', S.pc, '<div style="width:190px;height:190px;border:5px solid #F8635F;border-radius:50%;color:#F8635F;text-align:center;font:32px/190px FO;letter-spacing:.04em">8 BULAN</div>', 'left:640px;top:70px');
     S.sm = S.imgs.slice(1).map(id => photo(S.layer, id, 220, 270, 12));
   },
   draw(S, lt) {
