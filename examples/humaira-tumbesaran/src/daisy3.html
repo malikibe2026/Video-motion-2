@@ -352,9 +352,10 @@ K.secret = {   // sampul surat dibuka, kad keluar, lencana KAKAK dicop
     S.flap.style.transform = 'translate(' + (ex - 390) + 'px,' + (ey - 260) + 'px) perspective(1400px) rotateX(' + (fo * 178) + 'deg)';
     S.back.style.zIndex = 1; S.card.el.style.zIndex = 2; S.front.style.zIndex = 4; S.badge.style.zIndex = 5;
     const kc = eOut((lt - 4.3) / 1.0); setT(S.card.el, ex, lerp(ey + 40, 560, kc), 1, -2 * kc, clamp((lt - 4.3) / .1));
-    const kb = clamp((lt - 10.4) / .16), wob = lt > 10.56 ? Math.sin((lt - 10.56) * 24) * Math.exp(-(lt - 10.56) * 6) * 6 : 0;
+    const KT = ((T.rahsia.caps || [])[2] || [10.4])[0] + .8;   // cop KAKAK ikut masa kapsyen ketiga
+    const kb = clamp((lt - KT) / .16), wob = lt > KT + .16 ? Math.sin((lt - KT - .16) * 24) * Math.exp(-(lt - KT - .16) * 6) * 6 : 0;
     setT(S.badge, 800, 330, 1 + 1.4 * (1 - kb) * (1 - kb), -14 + wob, kb);
-    S.hearts.forEach(h => { const tt = lt - 10.5; if (tt < 0) { h.g.setAttribute('transform', 'translate(-200 -200)'); return; } const d = h.v * eOut(tt / 1.2); h.g.setAttribute('transform', 'translate(' + (540 + Math.cos(h.a) * d) + ' ' + (560 + Math.sin(h.a) * d + tt * tt * 60) + ') scale(' + (.8 * (1 - clamp((tt - 1.6) / .8))).toFixed(2) + ')'); });
+    S.hearts.forEach(h => { const tt = lt - KT - .1; if (tt < 0) { h.g.setAttribute('transform', 'translate(-200 -200)'); return; } const d = h.v * eOut(tt / 1.2); h.g.setAttribute('transform', 'translate(' + (540 + Math.cos(h.a) * d) + ' ' + (560 + Math.sin(h.a) * d + tt * tt * 60) + ') scale(' + (.8 * (1 - clamp((tt - 1.6) / .8))).toFixed(2) + ')'); });
   }
 };
 K.road = {   // laluan ke bab-bab akan datang
