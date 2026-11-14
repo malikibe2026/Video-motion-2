@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ms"><head><meta charset="utf-8"><title>Kisah tumbesaran - Daisy Days</title>
+<style>
+@font-face{font-family:FO;font-weight:400;src:url(assets/fonts-dd/fredoka-one-latin-400-normal.woff2)}
+@font-face{font-family:QS;font-weight:600;src:url(assets/fonts-dd/quicksand-latin-600-normal.woff2)}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#F5F0E6;color:#2D2D2D}
+.scene{position:absolute;inset:0;display:none;overflow:hidden}
+.orn{position:absolute;left:0;top:0}
+.card{position:absolute;background:#fff;border:3px solid #2D2D2D;border-radius:28px;box-shadow:6px 6px 0 #2D2D2D}
+#cap{left:70px;top:150px;width:940px;height:400px}
+.wd{display:inline-block;opacity:0;margin:0 3px}
+.kw{display:inline-block;background:#FDE68A;border:3px solid #2D2D2D;border-radius:50px;padding:0 18px;box-shadow:4px 4px 0 #2D2D2D;margin:0 3px}
+#photo{left:110px;top:600px;width:860px;height:1000px;padding:34px}
+#photo .box{position:absolute;inset:34px;display:flex;align-items:center;justify-content:center}
+#photo .im{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0}
+#photo img{max-width:100%;max-height:100%;object-fit:contain}
+#badge{left:50%;top:1670px;transform:translateX(-50%);border-radius:50px;padding:14px 46px 16px;font:400 50px/1 FO;white-space:nowrap;box-shadow:4px 4px 0 #2D2D2D;background:#FDE68A}
+#end .mos{position:absolute;inset:0}
+#end .mos img{position:absolute;height:150px;opacity:.22}
+#endcard{left:90px;top:620px;width:900px;height:720px;text-align:center;padding:60px 50px;display:flex;flex-direction:column;justify-content:center}
+#endcard .n1{font:400 124px/1.05 FO;color:#2D2D2D}
+#endcard .n2{font:600 52px/1.3 QS;margin-top:18px;color:#6B6B6B}
+#endcard .n3{display:inline-block;margin:34px auto 0;background:#F7C8D4;border:3px solid #2D2D2D;border-radius:50px;padding:10px 34px 12px;font:400 48px/1.2 FO;box-shadow:4px 4px 0 #2D2D2D}
+</style></head>
+<body>
+<script>
+'use strict';
+const W = 1080, H = 1920;
+const C = { cream: '#F5F0E6', turq: '#7ECDC0', pink: '#F7C8D4', butter: '#FDE68A', mint: '#A8E6CF', lav: '#D4A5E8', peach: '#FFCBA4', sky: '#A8D8F0', ink: '#2D2D2D' };
+const SURF = [C.turq, C.pink, C.mint, C.lav, C.peach, C.sky, C.butter, C.turq, C.pink, C.mint, C.cream];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const eOut = k => 1 - Math.pow(1 - clamp(k), 3);
+const rnd = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+// [mula, [gambar], [[masa_relatif, teks]], akhir, label, kedudukan_hiasan]
+const SCN = [
+  { a: 0, b: 14, img: ['001'], label: 'Hari pertama', caps: [[0, 'Ini *Humaira*.'], [6, 'Puteri pertama Abah dan Ummi.']] },
+  { a: 14, b: 22, img: ['004'], label: 'Baru lahir', caps: [[0, 'Baru lahir, tapi *reaksi* dah siap.']] },
+  { a: 22, b: 32, img: ['KEL'], label: 'Keluarga', caps: [[0, 'Abah cuba muka serius. Ummi senyum. Humaira tenang je.']] },
+  { a: 32, b: 44, img: ['005', '011', '012'], label: 'Bulan-bulan awal', caps: [[0, 'Tidur, menangis, *senyum*. Tiga kerja utama bayi.']] },
+  { a: 44, b: 54, img: ['025'], label: '7 bulan', caps: [[0, '7 bulan. Sudah pandai *duduk* dan bergaya.']] },
+  { a: 54, b: 64, img: ['032'], label: '8 bulan', caps: [[0, 'Tangan naik. Tanda setuju, atau nak ambil *pasir*?']] },
+  { a: 64, b: 72, img: ['049'], label: 'Genap setahun', caps: [[0, 'Genap setahun. Semua menyanyi, dia *tengok kamera*.']] },
+  { a: 72, b: 82, img: ['060'], label: '1 tahun 2 bulan', caps: [[0, 'Ketawa kuat, entah sebab apa. Dia tak perlu *sebab*.']] },
+  { a: 82, b: 94, img: ['018', '021', '024'], label: '1 tahun 7 bulan', caps: [[0, '1 tahun 7 bulan. *Pantai*, meniarap, dan muka serius.']] },
+  { a: 94, b: 106, img: ['079', 'KEL'], label: 'Keluarga', caps: [[0, 'Anak yang *sangat baik*. Itu yang paling Abah dan Ummi banggakan.']] },
+  { a: 106, b: 112.47, end: true, img: [], caps: [] }
+];
+const TOTAL = 112.47;
+const root = document.body;
+
+function src(id) { return id === 'KEL' ? 'assets/keluarga/foto-1.jpg' : 'assets/img/' + id + '.png'; }
+function el(tag, cls, parent, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; if (parent) parent.appendChild(e); return e; }
+
+// hiasan lukisan tangan: daisy, bintang, matahari, awan
+function orn(t, x, y, s, r) {
+  const sw = 3; let g = '';
+  if (t === 'daisy') {
+    for (let i = 0; i < 8; i++) g += '<ellipse cx="0" cy="' + (-s * .55) + '" rx="' + (s * .22) + '" ry="' + (s * .42) + '" transform="rotate(' + (i * 45) + ')" fill="#fff" stroke="#2D2D2D" stroke-width="' + sw + '"/>';
+    g += '<circle r="' + (s * .28) + '" fill="#FDE68A" stroke="#2D2D2D" stroke-width="' + sw + '"/>';
+  } else if (t === 'star') {
+    const p = []; for (let i = 0; i < 10; i++) { const a = Math.PI * i / 5 - Math.PI / 2, rr = i % 2 ? s * .42 : s; p.push((rr * Math.cos(a)).toFixed(1) + ',' + (rr * Math.sin(a)).toFixed(1)); }
+    g += '<polygon points="' + p.join(' ') + '" fill="#FDE68A" stroke="#2D2D2D" stroke-width="' + sw + '" stroke-linejoin="round"/>';
+  } else if (t === 'sun') {
+    for (let i = 0; i < 12; i++) { const a = Math.PI * 2 * i / 12; g += '<line x1="' + (Math.cos(a) * s * .7).toFixed(1) + '" y1="' + (Math.sin(a) * s * .7).toFixed(1) + '" x2="' + (Math.cos(a) * s).toFixed(1) + '" y2="' + (Math.sin(a) * s).toFixed(1) + '" stroke="#2D2D2D" stroke-width="' + sw + '" stroke-linecap="round"/>'; }
+    g += '<circle r="' + (s * .6) + '" fill="#FDE68A" stroke="#2D2D2D" stroke-width="' + sw + '"/>';
+  } else {
+    g += '<ellipse cx="0" cy="0" rx="' + s + '" ry="' + (s * .5) + '" fill="#fff" stroke="#2D2D2D" stroke-width="' + sw + '"/>';
+  }
+  return '<g class="og" data-r="' + r + '" transform="translate(' + x + ' ' + y + ') rotate(' + r + ')">' + g + '</g>';
+}
+const KINDS = ['daisy', 'star', 'sun', 'cloud'];
+function ornLayer(i) {
+  // 3–5 hiasan di tepi, dipotong oleh bingkai
+  const spots = [[60, 90], [1010, 120], [1040, 1520], [40, 1800], [980, 1840]];
+  let s = '';
+  spots.forEach(([x, y], k) => { const j = (i + k) % KINDS.length; s += orn(KINDS[j], x + (rnd(i * 7 + k) - .5) * 40, y, 70 + rnd(i + k) * 50, (rnd(k + i) - .5) * 30); });
+  return '<svg class="orn" width="1080" height="1920" viewBox="0 0 1080 1920">' + s + '</svg>';
+}
+
+function build(info, MAN) {
+  SCN.forEach((s, i) => {
+    s.root = el('div', 'scene', root);
+    if (s.end) {
+      s.root.id = 'end';
+      s.root.style.background = C.cream;
+      const mos = el('div', 'mos', s.root);
+      MAN.slice(0, 24).forEach((it, k) => { const im = el('img', '', mos); im.src = it.file; im.style.left = (20 + (k % 6) * 175) + 'px'; im.style.top = (60 + Math.floor(k / 6) * 390) + 'px'; });
+      s.root.insertAdjacentHTML('beforeend', ornLayer(i));
+      const card = el('div', 'card', s.root, '');
+      card.id = 'endcard'; card.style.cssText = '';
+      card.classList.add('card');
+      card.innerHTML = '<div class="n1">Adni Humaira</div><div class="n2">' + info.nama_penuh.replace('Adni Humaira ', '') + '</div><div class="n3">Lahir ' + info.lahir + '</div>';
+      s.endCard = card; return;
+    }
+    s.root.style.background = SURF[i % SURF.length];
+    s.root.insertAdjacentHTML('beforeend', ornLayer(i));
+    // kad kapsyen
+    s.cap = el('div', 'card', s.root); s.cap.id = 'cap';
+    s.capEls = s.caps.map(([rt, txt], j) => {
+      const d = el('div', '', s.cap); d.style.cssText = 'position:absolute;left:40px;right:40px;top:34px;display:none;text-align:center;font:400 80px/1.2 FO';
+      const words = txt.split(' ').map(w => {
+        const k = w.includes('*'); const word = w.replace(/\*/g, '');
+        return '<span class="wd' + (k ? ' kw' : '') + '">' + word + '</span>';
+      });
+      d.innerHTML = words.join(' ');
+      return { el: d, words: [...d.querySelectorAll('.wd')], t0: s.a + rt, t1: j + 1 < s.caps.length ? s.a + s.caps[j + 1][0] : s.b };
+    });
+    // kad gambar
+    s.photo = el('div', 'card', s.root); s.photo.id = 'photo';
+    const box = el('div', 'box', s.photo);
+    s.imEls = s.img.map(id => { const d = el('div', 'im', box); const im = el('img', '', d); im.src = src(id); return d; });
+    s.badge = el('div', 'card', s.root, s.label); s.badge.id = 'badge';
+  });
+}
+
+function seek(t) {
+  for (const s of SCN) {
+    const on = t >= s.a && t < s.b;
+    s.root.style.display = (t >= s.a && t < s.b + .001) ? 'block' : 'none';
+    if (!on) continue;
+    const lt0 = t - s.a, fade = clamp(lt0 / .35) * clamp((s.b - t) / .35);
+    if (s.end) {
+      s.root.style.opacity = fade;
+      const k = eOut(lt0 / .8);
+      s.endCard.style.transform = 'translateY(' + ((1 - k) * 40) + 'px) scale(' + (.96 + .04 * k) + ')';
+      s.endCard.style.opacity = k;
+      s.root.querySelectorAll('.og').forEach((g, i) => g.setAttribute('transform', 'translate(' + g.getAttribute('transform').match(/translate\(([^ ]+) ([^)]+)\)/).slice(1).join(' ') + ') rotate(' + (+g.dataset.r + Math.sin(t * .8 + i) * 3) + ')'));
+      continue;
+    }
+    s.root.style.opacity = fade;
+    // kad gambar masuk, lalu pindah antara gambar
+    const n = s.imEls.length, slot = (s.b - s.a) / n;
+    const pIn = eOut(lt0 / .55);
+    s.photo.style.opacity = pIn;
+    s.photo.style.transform = 'translateY(' + ((1 - pIn) * 50) + 'px) rotate(' + (-1.5 + pIn * 1.5) + 'deg)';
+    s.imEls.forEach((d, i) => {
+      const lt = t - s.a - i * slot;
+      if (lt < 0 || lt >= slot) { d.style.opacity = 0; return; }
+      const fin = eOut(lt / .35), fout = clamp((slot - lt) / .25);
+      d.style.opacity = fin * fout;
+      d.style.transform = 'scale(' + (1 + .03 * lt / slot) + ')';
+    });
+    // kapsyen
+    s.capEls.forEach(c => {
+      const vis = t >= c.t0 && t < c.t1;
+      c.el.style.display = vis ? 'block' : 'none';
+      if (!vis) return;
+      const out = clamp((c.t1 - t) / .25);
+      c.words.forEach((w, i) => {
+        const st = c.t0 + .07 * i, k = eOut((t - st) / .22);
+        w.style.opacity = k * out;
+        w.style.transform = 'translateY(' + ((1 - k) * 22) + 'px)';
+      });
+    });
+    s.badge.style.transform = 'translateX(-50%) translateY(' + ((1 - eOut(lt0 / .5)) * 30) + 'px)';
+    s.badge.style.opacity = eOut(lt0 / .5);
+    s.root.querySelectorAll('.og').forEach((g, i) => g.setAttribute('transform', 'translate(' + g.getAttribute('transform').match(/translate\(([^ ]+) ([^)]+)\)/).slice(1).join(' ') + ') rotate(' + (+g.dataset.r + Math.sin(t * .8 + i) * 3) + ')'));
+  }
+}
+
+window.seek = seek;
+window.ready = (async () => {
+  const info = await (await fetch('assets/info.json')).json();
+  const MAN = await (await fetch('assets/manifest.json')).json();
+  build(info, MAN.filter(it => !(info.buang || []).includes(it.n)));
+  await document.fonts.ready;
+  await Promise.all([...document.querySelectorAll('img')].map(i => i.decode().catch(() => 0)));
+  seek(0);
+  return { total: TOTAL, scenes: [] };
+})();
+</script>
+</body></html>
