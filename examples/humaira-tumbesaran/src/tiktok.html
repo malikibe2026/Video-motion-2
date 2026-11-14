@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ms"><head><meta charset="utf-8"><title>Kisah tumbesaran - gaya TikTok</title>
+<style>
+@font-face{font-family:N;font-weight:800;src:url(assets/fonts/nunito-latin-800-normal.woff2)}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#150903;font-family:N;color:#fff}
+#bg{position:absolute;left:0;top:0}
+#cap{position:absolute;left:70px;right:70px;top:190px;height:300px}
+.cc{position:absolute;left:0;right:0;top:0;text-align:center;font:800 84px/1.22 N;text-shadow:0 6px 0 rgba(0,0,0,.45)}
+.w{display:inline-block;opacity:0}
+.k{color:#ffa058}
+#img{position:absolute;left:90px;top:520px;width:900px;height:1120px}
+.im{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0}
+.im img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 28px 50px rgba(255,110,40,.35))}
+#end{position:absolute;left:0;top:0;width:1080px;height:1920px;display:none}
+#end .mos{position:absolute;inset:0}
+#end .mos img{position:absolute;height:150px;opacity:.16}
+#end .t{position:absolute;left:0;right:0;top:700px;text-align:center}
+#end .n1{font:800 118px/1.1 N;text-shadow:0 8px 0 rgba(0,0,0,.4)}
+#end .n2{font:800 50px/1.3 N;color:#f2d9c8;margin-top:14px}
+#end .n3{font:800 46px/1.3 N;color:#ffa058;margin-top:26px;text-shadow:0 0 18px rgba(255,130,50,.9)}
+</style></head>
+<body>
+<canvas id="bg" width="1080" height="1920"></canvas>
+<div id="img"></div>
+<div id="cap"></div>
+<div id="end"><div class="mos"></div><div class="t"><div class="n1">Adni Humaira</div><div class="n2" id="n2"></div><div class="n3" id="n3"></div></div></div>
+<script>
+'use strict';
+const W = 1080, H = 1920;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const eOut = k => 1 - Math.pow(1 - clamp(k), 3);
+// [mula_saat_bab, [senarai gambar], [[masa_relatif, teks]], akhir_saat_bab]; *kata* = kata kunci bercahaya
+const SCN = [
+  { a: 0, b: 14, img: ['001'], caps: [[0, 'Ini *Humaira*.'], [6, 'Puteri pertama Abah dan Ummi.']] },
+  { a: 14, b: 22, img: ['004'], caps: [[0, 'Baru lahir, tapi *reaksi* dah siap.']] },
+  { a: 22, b: 32, img: ['KEL'], caps: [[0, 'Abah cuba muka serius. Ummi senyum. Humaira tenang je.']] },
+  { a: 32, b: 44, img: ['005', '011', '012'], caps: [[0, 'Tidur, menangis, *senyum*. Tiga kerja utama bayi.']] },
+  { a: 44, b: 54, img: ['025'], caps: [[0, '7 bulan. Sudah pandai *duduk* dan bergaya.']] },
+  { a: 54, b: 64, img: ['032'], caps: [[0, 'Tangan naik. Tanda setuju, atau nak ambil *pasir*?']] },
+  { a: 64, b: 72, img: ['049'], caps: [[0, 'Genap setahun. Semua menyanyi, dia *tengok kamera*.']] },
+  { a: 72, b: 82, img: ['060'], caps: [[0, 'Ketawa kuat, entah sebab apa. Dia tak perlu *sebab*.']] },
+  { a: 82, b: 94, img: ['018', '021', '024'], caps: [[0, '1 tahun 7 bulan. *Pantai*, meniarap, dan muka serius.']] },
+  { a: 94, b: 106, img: ['079', 'KEL'], caps: [[0, 'Anak yang *sangat baik*. Itu yang paling Abah dan Ummi banggakan.']] },
+  { a: 106, b: 112.47, end: true, img: [], caps: [] }
+];
+const TOTAL = 112.47;
+const imgBox = document.getElementById('img'), capBox = document.getElementById('cap');
+const cv = document.getElementById('bg').getContext('2d');
+const endEl = document.getElementById('end');
+
+function src(id) { return id === 'KEL' ? 'assets/keluarga/foto-1.jpg' : 'assets/img/' + id + '.png'; }
+
+function build(info, MAN) {
+  SCN.forEach((s, si) => {
+    s.els = s.img.map(id => {
+      const d = document.createElement('div'); d.className = 'im';
+      const im = document.createElement('img'); im.src = src(id); d.appendChild(im); imgBox.appendChild(d); return d;
+    });
+    s.capEls = s.caps.map(([rt, txt], j) => {
+      const d = document.createElement('div'); d.className = 'cc';
+      d.innerHTML = txt.split(' ').map(w => {
+        const k = w.includes('*');
+        const word = w.replace(/\*/g, '');
+        return '<span class="w' + (k ? ' k' : '') + '">' + word + '</span>';
+      }).join(' ');
+      d.dataset.k = j; capBox.appendChild(d);
+      return { el: d, words: [...d.querySelectorAll('.w')], t0: s.a + rt, t1: j + 1 < s.caps.length ? s.a + s.caps[j + 1][0] : s.b };
+    });
+  });
+  // akhir: mozek gambar samar
+  const mos = endEl.querySelector('.mos');
+  MAN.slice(0, 24).forEach((it, i) => {
+    const im = document.createElement('img'); im.src = it.file;
+    im.style.left = (20 + (i % 6) * 175) + 'px'; im.style.top = (60 + Math.floor(i / 6) * 390) + 'px'; mos.appendChild(im);
+  });
+  document.getElementById('n2').textContent = info.nama_penuh.replace('Adni Humaira ', '');
+  document.getElementById('n3').textContent = 'Lahir ' + info.lahir;
+}
+
+function drawBg(t) {
+  const g = cv.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#241008'); g.addColorStop(1, '#0c0502'); cv.fillStyle = g; cv.fillRect(0, 0, W, H);
+  const p = .85 + .15 * Math.sin(t * 1.2);
+  const rg = cv.createRadialGradient(540, 900, 0, 540, 900, 1000);
+  rg.addColorStop(0, 'rgba(255,120,40,' + (.38 * p).toFixed(3) + ')'); rg.addColorStop(1, 'rgba(255,120,40,0)');
+  cv.fillStyle = rg; cv.fillRect(0, 0, W, H);
+  cv.strokeStyle = 'rgba(255,255,255,0.045)'; cv.lineWidth = 2;
+  for (let x = 0; x <= W; x += 80) { cv.beginPath(); cv.moveTo(x, 0); cv.lineTo(x, H); cv.stroke(); }
+  for (let y = 0; y <= H; y += 80) { cv.beginPath(); cv.moveTo(0, y); cv.lineTo(W, y); cv.stroke(); }
+  for (let i = 0; i < 30; i++) {
+    const x = (i * 137.5) % W, y = H - ((t * 28 + i * 71) % H), r = 2 + (i % 3);
+    cv.fillStyle = 'rgba(255,200,150,0.25)'; cv.beginPath(); cv.arc(x, y, r, 0, 7); cv.fill();
+  }
+}
+
+function seek(t) {
+  drawBg(t);
+  for (const s of SCN) {
+    const on = t >= s.a && t < s.b;
+    if (s.end) {
+      endEl.style.display = t >= s.a ? 'block' : 'none';
+      if (t >= s.a) endEl.style.opacity = clamp((t - s.a) / .6);
+      continue;
+    }
+    // gambar dalam bab: setiap gambar mendapat satu slot masa
+    const n = s.els.length, slot = (s.b - s.a) / n;
+    s.els.forEach((d, i) => {
+      const lt = t - s.a - i * slot;
+      if (!on || lt < 0 || lt >= slot) { d.style.opacity = 0; return; }
+      const fin = eOut(lt / .5), fout = clamp((slot - lt) / .3);
+      const fade = clamp((t - s.a) / .3) * clamp((s.b - t) / .3);
+      d.style.opacity = fin * fout * fade;
+      d.style.transform = 'translateY(' + ((1 - fin) * 36) + 'px) scale(' + (1 + .05 * lt / slot) + ')';
+    });
+    s.capEls.forEach(c => {
+      const vis = t >= c.t0 && t < c.t1;
+      c.el.style.display = vis ? 'block' : 'none';
+      if (!vis) return;
+      const out = clamp((c.t1 - t) / .25);
+      c.words.forEach((w, i) => {
+        const st = c.t0 + .08 * i, k = eOut((t - st) / .2);
+        w.style.opacity = k * out;
+        w.style.transform = 'translateY(' + ((1 - k) * 26) + 'px)';
+        if (w.classList.contains('k')) {
+          const glow = 14 + 7 * Math.sin(t * 3);
+          w.style.textShadow = '0 0 ' + glow.toFixed(1) + 'px rgba(255,130,50,.95), 0 0 ' + (glow * 3).toFixed(1) + 'px rgba(255,100,20,.7), 0 6px 0 rgba(0,0,0,.45)';
+        }
+      });
+    });
+  }
+  // gambar bab aktif sahaja dipaparkan (dan fade antara bab)
+}
+
+window.seek = seek;
+window.ready = (async () => {
+  const info = await (await fetch('assets/info.json')).json();
+  const MAN = await (await fetch('assets/manifest.json')).json();
+  build(info, MAN.filter(it => !(info.buang || []).includes(it.n)));
+  await document.fonts.ready;
+  await Promise.all([...document.querySelectorAll('img')].map(i => i.decode().catch(() => 0)));
+  seek(0);
+  return { total: TOTAL, scenes: [] };
+})();
+</script>
+</body></html>
