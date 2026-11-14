@@ -1,22 +1,26 @@
 """Campur lagu sebenar (disediakan pengguna) dengan kesan bunyi halus untuk cerita916.html.
 
-Guna: python3 audio_lagu.py   (perlukan cerita916_schedule.json dan assets/lagu/*.mp3)
+Guna: python3 audio_lagu.py [nama_filem]   (lalai cerita916; perlukan <nama>_schedule.json dan assets/lagu/*.mp3)
 - assets/lagu/latar.mp3    : lagu latar keseluruhan video
 - assets/lagu/birthday.mp3 : lagu hari jadi, hanya sepanjang bab 'setahun'
 Lagu latar dianjak supaya saat LIRIK jatuh tepat ketika gambar bayi baru lahir muncul.
 Selepas bab 'setahun', lagu latar disambung dari titik ia berhenti.
-Fail lagu tidak di-commit (hak cipta pemiliknya). Hasil: cerita916_lagu.wav
+Fail lagu tidak di-commit (hak cipta pemiliknya). Hasil: <nama>_lagu.wav
 """
-import json, subprocess, wave
+import json, subprocess, sys, wave
 import numpy as np
 
 SR = 48000
 LIRIK = 87.0          # saat dalam lagu latar: lirik yang mesti jatuh ketika gambar bayi baru lahir muncul
 BDAY_MULA = 2.9       # saat dalam lagu hari jadi; muziknya bermula 3.2 s, jatuh pada puncak kilat
 XF = .45              # tempoh silang pudar (s)
-S = json.load(open('cerita916_schedule.json'))
+NAMA = sys.argv[1] if len(sys.argv) > 1 else 'cerita916'
+S = json.load(open(NAMA + '_schedule.json'))
 T = S['total']; N = int(T * SR); t = np.arange(N) / SR
 sc = {n: (a, b) for n, a, b in S['scenes']}
+if not S.get('events'):               # filem tanpa senarai peristiwa: gambar bayi muncul sejurus selepas lap bulat,
+    S['events'] = [{'t': sc['lahir'][0] + .3, 'type': 'pop'}]   # dan setiap pertukaran bab diberi bunyi 'whoosh' lembut
+    S['events'] += [{'t': a, 'type': 'trans', 'kind': 'wipe'} for n, a, b in S['scenes'][1:]]
 rng = np.random.default_rng(7)
 
 
@@ -104,7 +108,7 @@ for e in S['events']:
 fx = fx / max(1e-9, np.abs(fx).max()) * rms(music) * 2.2
 mix = music + np.stack([fx, fx * .96], 1)
 mix = mix / max(1e-9, np.abs(mix).max()) * .92
-w = wave.open('cerita916_lagu.wav', 'wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
+w = wave.open(NAMA + '_lagu.wav', 'wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
 w.writeframes((np.clip(mix, -1, 1) * 32767).astype('<i2').tobytes()); w.close()
 print(f'ok {T:.2f}s | latar {LATAR_MULA}-{LATAR_MULA + s0:.1f}s | hari jadi {BDAY_MULA}-{BDAY_MULA + s1 - s0:.1f}s '
       f'pada video {s0:.2f}-{s1:.2f}s | lirik {LIRIK}s pada video {baby:.3f}s | latar disambung dari {resume:.2f}s')
