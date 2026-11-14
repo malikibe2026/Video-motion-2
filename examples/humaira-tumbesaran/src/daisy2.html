@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ms"><head><meta charset="utf-8"><title>Kisah Humaira - Daisy Days v2</title>
+<style>
+@font-face{font-family:FO;font-weight:400;src:url(assets/fonts-dd/fredoka-one-latin-400-normal.woff2)}
+@font-face{font-family:QS;font-weight:600;src:url(assets/fonts-dd/quicksand-latin-600-normal.woff2)}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#F5F0E6;color:#2D2D2D}
+.scene{position:absolute;inset:0;display:none;overflow:hidden}
+.orn{position:absolute;left:0;top:0;width:1080px;height:1920px}
+.card{position:absolute;background:#fff;border:3px solid #2D2D2D;border-radius:28px;box-shadow:6px 6px 0 #2D2D2D}
+#cap{left:70px;top:150px;width:940px;height:400px}
+.cc{position:absolute;left:40px;right:40px;top:40px;display:none;text-align:center;font:400 80px/1.2 FO}
+.wd{display:inline-block;opacity:0;margin:0 3px;transform-origin:50% 80%}
+.kw{display:inline-block;background:#FDE68A;border:3px solid #2D2D2D;border-radius:50px;padding:0 18px;box-shadow:4px 4px 0 #2D2D2D;margin:0 3px}
+#photo{left:110px;top:600px;width:860px;height:1000px}
+#photo .box{position:absolute;inset:34px}
+#photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#badge{left:50%;top:1640px;margin-left:-240px;width:480px;height:84px;border-radius:50px;font:400 48px/84px FO;text-align:center;box-shadow:4px 4px 0 #2D2D2D;background:#FDE68A}
+#dots{position:absolute;left:0;top:1790px;width:1080px;height:40px}
+#end .mos{position:absolute;inset:0}
+#end .mos img{position:absolute;height:150px;opacity:.2}
+#endcard{left:90px;top:620px;width:900px;height:720px;text-align:center;padding:60px 50px;display:flex;flex-direction:column;justify-content:center}
+#endcard .n1{font:400 124px/1.05 FO}
+#endcard .n2{font:600 52px/1.3 QS;margin-top:18px;color:#6B6B6B}
+#endcard .n3{display:inline-block;margin:34px auto 0;background:#F7C8D4;border:3px solid #2D2D2D;border-radius:50px;padding:10px 34px 12px;font:400 48px/1.2 FO;box-shadow:4px 4px 0 #2D2D2D}
+#title{position:absolute;left:40px;top:700px;width:1000px;height:300px;text-align:center;font:400 132px/1.1 FO;white-space:nowrap}
+#title .tl{display:inline-block;opacity:0}
+#title .sub{position:absolute;left:0;right:0;top:170px;font:600 48px/1.3 QS;color:#2D2D2D;white-space:normal}
+</style></head>
+<body>
+<script>
+'use strict';
+const C = { cream: '#F5F0E6', turq: '#7ECDC0', pink: '#F7C8D4', butter: '#FDE68A', mint: '#A8E6CF', lav: '#D4A5E8', peach: '#FFCBA4', sky: '#A8D8F0', ink: '#2D2D2D' };
+const SURF = [C.turq, C.pink, C.mint, C.lav, C.peach, C.sky, C.butter, C.mint, C.pink, C.turq, C.lav, C.cream];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const eOut = k => 1 - Math.pow(1 - clamp(k), 3);
+const eBack = k => { k = clamp(k); const c = 1.9; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };  // lantun sedikit
+const rnd = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+// Setiap bab: masa mula, masa tamat, gambar (satu sahaja), label, kapsyen [masa_relatif, teks]
+const SCN = [
+  { a: 0, b: 10, title: true, label: '', caps: [] },
+  { a: 10, b: 20, img: '001', label: 'Hari pertama', caps: [[0, 'Ini *Humaira*.'], [4.5, 'Anak pertama abah dan ummi.']] },
+  { a: 20, b: 30, img: '004', label: 'Baru lahir', caps: [[0, 'Baru lahir dah pandai menjelir lidah.'], [5, 'Entah ikut siapa.']] },
+  { a: 30, b: 42, img: 'KEL', label: 'Keluarga', caps: [[0, 'Ni family kami.'], [3.5, 'Humaira tengok kamera macam dia tahu dia *bintang*.']] },
+  { a: 42, b: 54, img: '011', label: 'Tangan kecil', caps: [[0, 'Tangan kecil ni je.'], [3, 'Dah cukup buat abah *cair*.']] },
+  { a: 54, b: 66, img: '025', label: '7 bulan', caps: [[0, '7 bulan, dah pandai duduk.'], [4, '*Bangga* gila.']] },
+  { a: 66, b: 78, img: '032', label: '8 bulan', caps: [[0, 'Angkat tangan tanda setuju?'], [4, 'Atau nak ambil *pasir*? Kami pun tak pasti.']] },
+  { a: 78, b: 92, img: '049', label: 'Genap setahun', caps: [[0, 'Genap setahun.'], [3, 'Semua menyanyi, dia *tengok kamera* je.']] },
+  { a: 92, b: 104, img: '060', label: '1 tahun 2 bulan', caps: [[0, 'Ketawa tak henti.'], [4, 'Sebab apa, kami pun *tak tahu*.']] },
+  { a: 104, b: 118, img: '024', label: '1 tahun 7 bulan', caps: [[0, '1 tahun 7 bulan. *Pantai*.'], [4.5, 'Dia takkan ingat, tapi kami ingat.']] },
+  { a: 118, b: 132, img: '079', label: 'Keluarga', caps: [[0, 'Humaira anak yang *baik*.'], [4.5, 'Itu je yang kami nak cakap.']] },
+  { a: 132, b: 146, img: '001', label: 'Sambung lagi', caps: [[0, 'Kisah ni belum habis.'], [4.5, 'Kami nak tulis lagi, *sama-sama* Humaira.']] },
+  { a: 146, b: 154, end: true, caps: [] }
+];
+const TOTAL = 154;
+const root = document.body;
+
+function src(id) { return id === 'KEL' ? 'assets/keluarga/foto-1.jpg' : 'assets/img/' + id + '.png'; }
+function el(tag, cls, parent, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; if (parent) parent.appendChild(e); return e; }
+function svgEl(tag, at, parent) { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const k in at) e.setAttribute(k, at[k]); if (parent) parent.appendChild(e); return e; }
+
+// hiasan lukisan tangan: daisy, bintang, matahari, awan (dilukis garisnya)
+function ornament(parent, type, x, y, s, r) {
+  const g = svgEl('g', { transform: 'translate(' + x + ' ' + y + ')' }, parent);
+  const inner = svgEl('g', {}, g); const sw = 3;
+  if (type === 'daisy') {
+    for (let i = 0; i < 8; i++) svgEl('ellipse', { cx: 0, cy: -s * .55, rx: s * .22, ry: s * .42, transform: 'rotate(' + (i * 45) + ')', fill: '#fff', stroke: '#2D2D2D', 'stroke-width': sw }, inner);
+    svgEl('circle', { r: s * .28, fill: '#FDE68A', stroke: '#2D2D2D', 'stroke-width': sw }, inner);
+  } else if (type === 'star') {
+    const p = []; for (let i = 0; i < 10; i++) { const a = Math.PI * i / 5 - Math.PI / 2, rr = i % 2 ? s * .42 : s; p.push((rr * Math.cos(a)).toFixed(1) + ',' + (rr * Math.sin(a)).toFixed(1)); }
+    svgEl('polygon', { points: p.join(' '), fill: '#FDE68A', stroke: '#2D2D2D', 'stroke-width': sw, 'stroke-linejoin': 'round' }, inner);
+  } else if (type === 'sun') {
+    for (let i = 0; i < 12; i++) { const a = Math.PI * 2 * i / 12; svgEl('line', { x1: Math.cos(a) * s * .7, y1: Math.sin(a) * s * .7, x2: Math.cos(a) * s, y2: Math.sin(a) * s, stroke: '#2D2D2D', 'stroke-width': sw, 'stroke-linecap': 'round' }, inner); }
+    svgEl('circle', { r: s * .6, fill: '#FDE68A', stroke: '#2D2D2D', 'stroke-width': sw }, inner);
+  } else {
+    svgEl('ellipse', { cx: 0, cy: 0, rx: s, ry: s * .5, fill: '#fff', stroke: '#2D2D2D', 'stroke-width': sw }, inner);
+  }
+  g.__inner = inner; g.__bx = x; g.__by = y; g.__r = r; g.__s = s;
+  return g;
+}
+const KINDS = ['daisy', 'star', 'sun', 'cloud'];
+const SPOTS = [[60, 80], [1020, 120], [1040, 1480], [40, 1800], [980, 1850], [520, 40]];
+
+function ornLayer(parent, seed, n) {
+  const svg = svgEl('svg', { class: 'orn', width: 1080, height: 1920, viewBox: '0 0 1080 1920' }, parent);
+  const list = [];
+  for (let k = 0; k < n; k++) {
+    const [x, y] = SPOTS[k % SPOTS.length];
+    list.push(ornament(svg, KINDS[(seed + k) % KINDS.length], x + (rnd(seed * 7 + k) - .5) * 30, y, 60 + rnd(seed + k) * 40, 0));
+  }
+  return list;
+}
+
+// kelipan kecil (bintang muncul dan hilang) untuk saat emosi
+function sparkles(parent, seed, x, y) {
+  const list = [];
+  for (let k = 0; k < 6; k++) {
+    const a = Math.PI * 2 * k / 6 + rnd(seed + k) * .5;
+    const g = svgEl('polygon', { points: '0,-14 4,-4 14,0 4,4 0,14 -4,4 -14,0 -4,-4', fill: k % 2 ? '#FDE68A' : '#fff', stroke: '#2D2D2D', 'stroke-width': 2 }, parent);
+    list.push({ g, x: x + Math.cos(a) * 170, y: y + Math.sin(a) * 170, d: .05 * k });
+  }
+  return list;
+}
+
+function build(info, MAN) {
+  SCN.forEach((s, i) => {
+    s.root = el('div', 'scene', root);
+    s.root.style.zIndex = i + 1;
+    s.root.style.background = SURF[i % SURF.length];
+    s.ornList = [];
+    if (s.end) {
+      s.root.style.background = C.cream;
+      const mos = el('div', '', s.root); mos.style.cssText = 'position:absolute;inset:0';
+      MAN.slice(0, 24).forEach((it, k) => { const im = el('img', '', mos); im.src = it.file; im.style.cssText = 'position:absolute;height:150px;opacity:.2;left:' + (20 + (k % 6) * 175) + 'px;top:' + (60 + Math.floor(k / 6) * 390) + 'px'; });
+      s.ornList = ornLayer(s.root, 3, 6);
+      s.confetti = [];
+      for (let k = 0; k < 40; k++) { const r = el('div', '', s.root); r.style.cssText = 'position:absolute;width:18px;height:10px;border:2px solid #2D2D2D;border-radius:3px;background:' + [C.turq, C.pink, C.butter, C.lav, C.mint, C.peach][k % 6]; s.confetti.push({ e: r, x: rnd(k) * 1080, v: 280 + rnd(k + 9) * 360, d: rnd(k + 2) * 1.2, sp: (rnd(k + 5) - .5) * 4 }); }
+      s.endCard = el('div', 'card', s.root); s.endCard.id = 'endcard';
+      s.endCard.innerHTML = '<div class="n1">Adni Humaira</div><div class="n2">' + info.nama_penuh.replace('Adni Humaira ', '') + '</div><div class="n3">Lahir ' + info.lahir + '</div>';
+      return;
+    }
+    if (s.title) {
+      s.titleEl = el('div', '', s.root); s.titleEl.id = 'title';
+      s.titleEl.innerHTML = 'Kisah <span style="color:#F8635F">Humaira</span>';
+      s.titleLetters = [...s.titleEl.childNodes].flatMap(n => n.nodeType === 3 ? [...n.textContent].map(ch => { const sp = el('span', 'tl', s.titleEl, ch === ' ' ? '&nbsp;' : ch); return sp; }) : [...n.childNodes].flatMap(c2 => [...c2.textContent].map(ch => el('span', 'tl', s.titleEl, ch))));
+      s.titleEl.innerHTML = '';
+      'Kisah Humaira'.split('').forEach(ch => el('span', 'tl', s.titleEl, ch === ' ' ? '&nbsp;' : ch));
+      s.subEl = el('div', 'sub', s.titleEl, 'Cerita kecil tentang anak kami');
+      s.ornList = ornLayer(s.root, 1, 5);
+      return;
+    }
+    s.ornList = ornLayer(s.root, i + 2, 4);
+    s.sparks = sparkles(s.root, i * 3, 540, 700);
+    // kad gambar
+    s.photo = el('div', 'card', s.root); s.photo.id = 'photo';
+    const box = el('div', 'box', s.photo); const im = el('img', '', box); im.src = src(s.img);
+    // kad kapsyen
+    s.cap = el('div', 'card', s.root); s.cap.id = 'cap';
+    s.capEls = s.caps.map(([rt, txt], j) => {
+      const d = el('div', 'cc', s.cap);
+      d.innerHTML = txt.split(' ').map(w => { const k = w.includes('*'); return '<span class="wd' + (k ? ' kw' : '') + '">' + w.replace(/\*/g, '') + '</span>'; }).join(' ');
+      return { el: d, words: [...d.querySelectorAll('.wd')], t0: s.a + rt, t1: j + 1 < s.caps.length ? s.a + s.caps[j + 1][0] : s.b };
+    });
+    s.badge = el('div', 'card', s.root, s.label); s.badge.id = 'badge';
+  });
+  // titik garis masa di bawah
+  const dots = el('div', '', root); dots.id = 'dots';
+  SCN.forEach((s, i) => { if (s.end || s.title) return; el('div', '', dots).style.cssText = 'position:absolute;top:0;width:20px;height:20px;border-radius:50%;border:3px solid #2D2D2D;background:#fff;left:' + (150 + (i - 1) * 75) + 'px'; });
+  SCN.dots = [...dots.children];
+  SCN.dotsEl = dots; dots.style.zIndex = 99;
+}
+
+function seek(t) {
+  SCN.forEach((s, i) => {
+    const nxt = SCN[i + 1];
+    const vis = t >= s.a && (nxt ? t < nxt.a + .9 : true) && t < s.b + 1;
+    s.root.style.display = vis ? 'block' : 'none';
+    if (!vis) return;
+    const lt = t - s.a;
+    // peralihan: bulatan dari tengah
+    const wipe = eOut(lt / .8) * 1500;
+    s.root.style.clipPath = i === 0 ? 'none' : 'circle(' + wipe.toFixed(1) + 'px at 540px 960px)';
+    // hiasan lukisan: muncul satu demi satu, bergoyang lembut (tanpa berpusing)
+    s.ornList.forEach((g, k) => {
+      const pk = eBack(clamp((lt - .15 - k * .12) / .45));
+      g.setAttribute('transform', 'translate(' + (g.__bx) + ' ' + (g.__by + Math.sin(t * 1.2 + k) * 6) + ') scale(' + pk.toFixed(3) + ')');
+    });
+    if (s.title) {
+      const fo = clamp(lt / 1.2);
+      s.titleEl.querySelectorAll('.tl').forEach((c, k) => {
+        const p = eBack(clamp((lt - .25 - k * .08) / .45));
+        c.style.opacity = clamp((lt - .25 - k * .08) / .15);
+        c.style.transform = 'translateY(' + ((1 - p) * 90) + 'px) scale(' + (.7 + .3 * p) + ')';
+      });
+      s.subEl.style.opacity = clamp((lt - 1.9) / .6);
+      s.subEl.style.transform = 'translateY(' + ((1 - eOut((lt - 1.9) / .6)) * 20) + 'px)';
+      s.root.style.opacity = 1;
+      return;
+    }
+    if (s.end) {
+      const k = eBack(clamp((lt - .4) / .8));
+      s.endCard.style.transform = 'translateY(' + ((1 - k) * 60) + 'px) scale(' + (.9 + .1 * k) + ')';
+      s.endCard.style.opacity = clamp((lt - .4) / .4);
+      s.confetti.forEach(c => { const tt = lt - c.d; if (tt < 0) { c.e.style.opacity = 0; return; } c.e.style.opacity = 1; c.e.style.transform = 'translate(' + (c.x + Math.sin(tt * 2 + c.x) * 25) + 'px,' + ((tt * c.v) % 2000 - 100) + 'px) rotate(' + (tt * 120 * c.sp) + 'deg)'; });
+      return;
+    }
+    // kad gambar: masuk dari sisi sambil condong, kemudian terapung perlahan
+    const dir = (i % 2) ? 1 : -1;
+    const pin = eBack(clamp(lt / .7));
+    s.photo.style.opacity = clamp(lt / .25);
+    s.photo.style.transform = 'translate(' + ((1 - pin) * 900 * dir) + 'px,' + (Math.sin(t * 1.3) * 6) + 'px) rotate(' + ((1 - pin) * -10 * dir + Math.sin(t * .9) * .4) + 'deg)';
+    // kad kapsyen naik perlahan
+    s.cap.style.transform = 'translateY(' + ((1 - eOut(clamp((lt - .3) / .6))) * 60) + 'px)';
+    s.cap.style.opacity = clamp((lt - .3) / .3);
+    // kapsyen: perkataan melantun satu demi satu
+    s.capEls.forEach(c => {
+      const vis2 = t >= c.t0 && t < c.t1;
+      c.el.style.display = vis2 ? 'block' : 'none';
+      if (!vis2) return;
+      const out = clamp((c.t1 - t) / .3);
+      c.words.forEach((w, k) => {
+        const st = c.t0 + .09 * k, p = eBack((t - st) / .4);
+        w.style.opacity = clamp((t - st) / .15) * out;
+        w.style.transform = 'translateY(' + ((1 - p) * 30) + 'px) scale(' + (.7 + .3 * p) + ')' + (w.classList.contains('kw') ? ' rotate(' + (Math.sin((t - st) * 14) * 3 * Math.exp(-(t - st) * 3)).toFixed(2) + 'deg)' : '');
+      });
+    });
+    // label pil naik dari bawah
+    const pb = eBack(clamp((lt - .5) / .5));
+    s.badge.style.transform = 'translateY(' + ((1 - pb) * 80) + 'px)';
+    s.badge.style.opacity = clamp((lt - .5) / .25);
+    // kelipan bila kapsyen pertama masuk
+    s.sparks.forEach(sp => { const tt = lt - .8 - sp.d; const p = eOut(tt / .4) * (1 - clamp((tt - .5) / .6)); sp.g.setAttribute('transform', 'translate(' + (sp.x) + ' ' + (sp.y) + ') scale(' + Math.max(0, p).toFixed(2) + ')'); });
+  });
+  // titik garis masa: titik semasa diisi
+  SCN.dots && SCN.dots.forEach((d, k) => {
+    const s = SCN.filter(x => !x.end && !x.title)[k];
+    const on = s && t >= s.a;
+    d.style.background = on ? '#F8635F' : '#fff';
+  });
+}
+
+window.seek = seek;
+window.ready = (async () => {
+  const info = await (await fetch('assets/info.json')).json();
+  const MAN = await (await fetch('assets/manifest.json')).json();
+  build(info, MAN.filter(it => !(info.buang || []).includes(it.n)));
+  await document.fonts.ready;
+  await Promise.all([...document.querySelectorAll('img')].map(i => i.decode().catch(() => 0)));
+  seek(0);
+  return { total: TOTAL, scenes: [] };
+})();
+</script>
+</body></html>
