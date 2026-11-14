@@ -1,6 +1,8 @@
 """Campur narasi suara ke atas muzik cerita.
 
-Guna: python3 audio_narasi.py <fail_suara.(mp3|wav)> [cerita916_schedule.json]
+Guna: python3 audio_narasi.py <fail_suara.(mp3|wav)> [cerita916_schedule.json] [teks.json]
+- Jika teks.json (cth. assets/cerita3.json) diberi, ofset baris = masa kapsyen pertama bab itu.
+- Pemboleh ubah MUSIK=tiada: hasilkan suara sahaja tanpa muzik.
 - Suara dipotong ikut jeda kepada 12 baris (satu baris setiap bab).
 - Setiap baris diletak pada masa mula bab + ofset (selepas tajuk/gambar pertama).
 - Jika baris terlalu panjang untuk ruangnya, ia dipercepat sedikit (maks 1.15x).
@@ -17,6 +19,11 @@ B = 60 / 96
 OFF = {'buka': 1.3, 'lahir': 3 * B, 'polaroid': 2 * B, 'panel': 2 * B, 'karusel': 2 * B, 'odometer': 2 * B,
        'setahun': .6, 'laluan': 2 * B, 'kinetik': 2 * B, 'pantai': 2 * B, 'keluarga': 3 * B, 'penutup': 1.5}
 scenes = sched['scenes']; total = sched['total'] + .3
+if len(sys.argv) > 3:                  # ofset dari kapsyen pertama setiap bab
+    TX = json.load(open(sys.argv[3]))
+    OFF = {k: (v['caps'][0][0] if v.get('caps') else 1.0) for k, v in TX.items() if isinstance(v, dict)}
+import os
+NO_MUSIC = os.environ.get('MUSIK') == 'tiada'
 
 def load(path):
     raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', path, '-ac', '1', '-ar', str(SR), '-f', 's16le', '-'],
@@ -78,6 +85,8 @@ env = np.convolve(np.abs(out), np.ones(int(.12 * SR)) / int(.12 * SR), 'same')
 env = np.clip(env / max(1e-9, np.percentile(env[env > 1e-4], 70)), 0, 1)
 env = np.convolve(env, np.ones(int(.25 * SR)) / int(.25 * SR), 'same')
 duck = 1 - 0.62 * np.clip(env, 0, 1)
+if NO_MUSIC:
+    print('\n'.join(report)); sys.exit(0)
 w = wave.open('cerita_mix.wav'); m = np.frombuffer(w.readframes(w.getnframes()), '<i2').reshape(-1, 2).astype(np.float32) / 32768
 L = min(len(m), len(out)); m = m[:L] * duck[:L, None]
 mix = m + 1.0 * np.stack([out[:L], out[:L]], 1)
