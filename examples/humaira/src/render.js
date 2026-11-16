@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 const fs = require('fs'), path = require('path');
 const [, , mode, out, a, b] = process.argv;
-const FPS = 30, URL = 'http://127.0.0.1:8777/humaira.html';
+const FPS = 30, URL = "http://127.0.0.1:8777/" + (process.env.PAGE || "humaira.html");
 (async () => {
   const browser = await chromium.launch({ args: ['--font-render-hinting=none', '--force-color-profile=srgb', '--disable-gpu-vsync'] });
   const page = await browser.newPage({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });

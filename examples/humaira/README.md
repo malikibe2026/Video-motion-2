@@ -1,3 +1,22 @@
+# Adni Humaira (9:16), video untuk anak
+
+`adni-humaira-9x16.mp4` (66 s, dengan bunyi ambien) dan `adni-humaira-9x16-senyap.mp4` (tanpa audio).
+Sumber: `src/adni.html`, bunyi `src/audio_adni.py`, render `PAGE=adni.html node render.js chunk ...` (3 × 660 bingkai).
+
+| Masa | Babak | Isi | Rujukan |
+|---|---|---|---|
+| 0-6 s | Nama | عَدْنِي حُمَيْرَاء, "Sebuah nama, sebuah doa" | |
+| 5.6-12.6 | Adni | 'Adn: syurga tempat menetap yang kekal; taman 'Adn | Ar-Ra'd 13:23 (terjemahan ringkas, perlu disemak) |
+| 12.2-18.6 | Humaira | "yang kemerah-merahan" | Makna bahasa |
+| 18.2-25.2 | Sempena | Gelaran mesra Rasulullah ﷺ untuk Saidatina 'Aisyah r.a. | |
+| 24.8-49.2 | Empat doa | dikasihi, membesar riang, cintakan ilmu, pemurah | Bukhari 3662, Abi Dawud 2578, adh-Dhahabi, Ibn Sa'd |
+| 48.8-55.2 | Doa | dalam peliharaan Allah | An-Nur 24:11-20 |
+| 54.8-66 | Penutup | Semoga menjadi penghuni syurga 'Adn bersama kami; اللَّهُمَّ بَارِكْ فِيهَا | |
+
+Nota: makna "Adni" di sini diambil daripada kata 'Adn (عدن). Ejaan Arab عَدْنِي ialah andaian; sahkan ejaan yang digunakan keluarga.
+
+---
+
 # Humaira: kisah Saidatina Aisyah r.a. (9:16)
 
 Video 70 saat, 1080×1920, 30 fps. Tiada suara naratif; cerita dibawa oleh teks kinetik dan animasi.
