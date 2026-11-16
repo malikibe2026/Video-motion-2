@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>Humaira</title>
+<style>
+@font-face{font-family:'Fraunces';font-style:italic;font-weight:600;src:url(fonts/fraunces-latin-600-italic.woff2) format('woff2')}
+@font-face{font-family:'Fraunces';font-style:normal;font-weight:600;src:url(fonts/fraunces-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Jakarta';font-weight:500;src:url(fonts/plus-jakarta-sans-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'Jakarta';font-weight:600;src:url(fonts/plus-jakarta-sans-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Jakarta';font-weight:700;src:url(fonts/plus-jakarta-sans-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:'Jakarta';font-weight:800;src:url(fonts/plus-jakarta-sans-latin-800-normal.woff2) format('woff2')}
+@font-face{font-family:'Amiri';font-weight:400;src:url(fonts/amiri-arabic-400-normal.woff2) format('woff2')}
+@font-face{font-family:'Amiri';font-weight:700;src:url(fonts/amiri-arabic-700-normal.woff2) format('woff2')}
+@font-face{font-family:'Ruqaa';font-weight:700;src:url(fonts/aref-ruqaa-arabic-700-normal.woff2) format('woff2')}
+@font-face{font-family:'Fredoka';font-weight:600;src:url(fonts/fredoka-latin-600-normal.woff2) format('woff2')}
+html,body{margin:0;background:#000;overflow:hidden}
+canvas{display:block}
+#hud{position:fixed;left:8px;top:8px;color:#fff;font:12px monospace;opacity:.6}
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="hud"></div>
+<script>
+// ============================================================
+//  HUMAIRA  ·  9:16 · 1080x1920 · 30 fps · 70 s
+//  Semua bingkai dikira daripada masa t melalui window.seek(t).
+//  Tiada pemasa, tiada Math.random (PRNG berbenih sahaja).
+// ============================================================
+const W = 1080, H = 1920, T = 70;
+const MAIN = document.getElementById('c');
+const M = MAIN.getContext('2d');
+const L = document.createElement('canvas'); L.width = W; L.height = H;
+const LC = L.getContext('2d');
+let X = M; // konteks semasa
+
+// ---------- matematik ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const io = t => t <= 0 ? 0 : t >= 1 ? 1 : (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const o3 = t => t <= 0 ? 0 : t >= 1 ? 1 : 1 - Math.pow(1 - t, 3);
+const o5 = t => t <= 0 ? 0 : t >= 1 ? 1 : 1 - Math.pow(1 - t, 5);
+const i3 = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * t;
+const TAU = Math.PI * 2;
+function spring(x, z = .55, f = 1.6) {           // tindak balas langkah, bentuk tertutup
+  if (x <= 0) return 0;
+  const w = TAU * f, wd = w * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w * x) * (Math.cos(wd * x) + z * w / wd * Math.sin(wd * x));
+}
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; } }
+const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mix = (a, b, t) => { const A = hex(a), B = hex(b); return `rgb(${Math.round(lerp(A[0], B[0], t))},${Math.round(lerp(A[1], B[1], t))},${Math.round(lerp(A[2], B[2], t))})`; };
+const mixArr = (A, B, t) => [lerp(A[0], B[0], t), lerp(A[1], B[1], t), lerp(A[2], B[2], t)];
+const rgb = (a, al = 1) => `rgba(${a[0] | 0},${a[1] | 0},${a[2] | 0},${al})`;
+
+// ---------- palet ----------
+const C = {
+  rose: '#ff8fb1', roseD: '#e9578a', roseL: '#ffd0de', gold: '#f7c873', goldL: '#ffe7b0', goldD: '#c98f3a',
+  cream: '#fff6ea', ink: '#3a1730', sand: '#f0bf86', sandD: '#d8955d', green: '#2fa57a', greenL: '#7fe0b5'
+};
+const SANS = "'Jakarta','Amiri',sans-serif", SERIF = "'Fraunces','Amiri',serif";
+
+// ---------- latar langit (kunci warna) ----------
+const SKY = [
+  [0.0, '#0b0720', '#271043', '#4c1a52', 1.0],
+  [5.6, '#120926', '#3a1250', '#83305f', .85],
+  [11.6, '#0c0a24', '#221548', '#4a2a60', 1.0],
+  [18.6, '#1c1038', '#6a2c5c', '#e48a6c', .45],
+  [24.6, '#170822', '#4a1238', '#902a56', .7],
+  [30.6, '#26133e', '#7b3b6b', '#f2a27a', .25],
+  [37.6, '#170d2c', '#3a1b48', '#6c3456', .8],
+  [41.6, '#05051a', '#121a46', '#2b2b6e', 1.25],
+  [45.6, '#0d0b25', '#22204e', '#402d63', 1.0],
+  [50.1, '#291537', '#7a3b54', '#e3a070', .3],
+  [54.1, '#0d0c16', '#221e30', '#3a3148', .15],
+  [56.0, '#0d0c16', '#221e30', '#3a3148', .15],
+  [57.0, '#2c2252', '#7d5d8e', '#f4c27c', .3],
+  [58.1, '#100b28', '#2a1a4c', '#523068', 1.0],
+  [62.1, '#1b2656', '#7b5a8c', '#f7b68b', .45],
+  [70.0, '#1b2656', '#7b5a8c', '#f7b68b', .45],
+].map(k => [k[0], hex(k[1]), hex(k[2]), hex(k[3]), k[4]]);
+function skyAt(t) {
+  let i = 0; while (i < SKY.length - 1 && t >= SKY[i + 1][0]) i++;
+  const a = SKY[i], b = SKY[Math.min(i + 1, SKY.length - 1)];
+  // peralihan dalam 0.6 s di kiri-kanan kunci
+  let k = 0;
+  if (b !== a) { const span = Math.min(.6, (b[0] - a[0]) / 2); k = io(prog(t, b[0] - span, b[0] + span)); }
+  // kunci terdahulu juga mungkin masih beralih
+  if (i > 0) { const p = SKY[i - 1]; const span = Math.min(.6, (a[0] - p[0]) / 2); const kk = io(prog(t, a[0] - span, a[0] + span)); if (kk < 1) { return [mixArr(p[1], a[1], kk), mixArr(p[2], a[2], kk), mixArr(p[3], a[3], kk), lerp(p[4], a[4], kk)]; } }
+  return [mixArr(a[1], b[1], k), mixArr(a[2], b[2], k), mixArr(a[3], b[3], k), lerp(a[4], b[4], k)];
+}
+
+// ---------- bintang & debu cahaya ----------
+const rnd = mulberry32(1446);
+const STARS = Array.from({ length: 260 }, () => ({ x: rnd() * W, y: rnd() * H * .8, r: .6 + rnd() * rnd() * 2.6, f: .4 + rnd() * 1.6, ph: rnd() * TAU, warm: rnd() < .25 }));
+const MOTES = Array.from({ length: 46 }, () => ({ x: rnd() * W, y: rnd() * H, r: 1.5 + rnd() * 4, v: 14 + rnd() * 30, sw: rnd() * TAU, a: .15 + rnd() * .35 }));
+
+function drawSky(t) {
+  const [top, mid, bot, stars] = skyAt(t);
+  const g = M.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, rgb(top)); g.addColorStop(.55, rgb(mid)); g.addColorStop(1, rgb(bot));
+  M.fillStyle = g; M.fillRect(0, 0, W, H);
+  // cahaya lembut tengah
+  const rg = M.createRadialGradient(540, 820, 0, 540, 820, 900);
+  rg.addColorStop(0, 'rgba(255,170,200,0.10)'); rg.addColorStop(1, 'rgba(255,170,200,0)');
+  M.fillStyle = rg; M.fillRect(0, 0, W, H);
+  // bintang
+  for (const s of STARS) {
+    const tw = .55 + .45 * Math.sin(t * s.f * 2 + s.ph);
+    const a = clamp(stars * tw * (1 - s.y / (H * .9)));
+    if (a < .02) continue;
+    M.fillStyle = s.warm ? `rgba(255,214,160,${a})` : `rgba(255,240,250,${a})`;
+    M.beginPath(); M.arc(s.x, s.y + Math.sin(t * .1 + s.ph) * 2, s.r, 0, TAU); M.fill();
+    if (s.r > 2.4 && a > .4) sparkle(M, s.x, s.y, s.r * 4 * tw, `rgba(255,236,245,${a * .7})`);
+  }
+}
+function drawMotes(t) {
+  for (const m of MOTES) {
+    const y = ((m.y - t * m.v) % H + H) % H;
+    const x = m.x + Math.sin(t * .7 + m.sw) * 18;
+    const a = m.a * (.6 + .4 * Math.sin(t * 1.3 + m.sw));
+    const g = M.createRadialGradient(x, y, 0, x, y, m.r * 3);
+    g.addColorStop(0, `rgba(255,214,228,${a})`); g.addColorStop(1, 'rgba(255,214,228,0)');
+    M.fillStyle = g; M.beginPath(); M.arc(x, y, m.r * 3, 0, TAU); M.fill();
+  }
+}
+
+// ---------- tekstur akhir: vignette + bijian ----------
+const VIG = document.createElement('canvas'); VIG.width = W; VIG.height = H;
+(() => { const v = VIG.getContext('2d'); const g = v.createRadialGradient(540, 900, 380, 540, 960, 1250); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(8,0,16,0.55)'); v.fillStyle = g; v.fillRect(0, 0, W, H); })();
+const GRAIN = [0, 1, 2, 3].map(k => {
+  const c = document.createElement('canvas'); c.width = 540; c.height = 960; const g = c.getContext('2d');
+  const id = g.createImageData(540, 960); const r = mulberry32(77 + k);
+  for (let i = 0; i < id.data.length; i += 4) { const v = 128 + (r() - .5) * 90; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+  g.putImageData(id, 0, 0); return c;
+});
+
+// ---------- primitif ----------
+function sparkle(c, x, y, s, col) {
+  c.save(); c.fillStyle = col; c.beginPath();
+  c.moveTo(x, y - s); c.quadraticCurveTo(x, y, x + s, y); c.quadraticCurveTo(x, y, x, y + s); c.quadraticCurveTo(x, y, x - s, y); c.quadraticCurveTo(x, y, x, y - s);
+  c.fill(); c.restore();
+}
+function glow(c, x, y, r, col, a) {
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, col.replace('A', a)); g.addColorStop(1, col.replace('A', 0));
+  c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+}
+function heartPath(c, x, y, s) {
+  c.beginPath();
+  for (let i = 0; i <= 120; i++) {
+    const a = i / 120 * TAU;
+    const hx = 16 * Math.pow(Math.sin(a), 3), hy = -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a));
+    const px = x + hx * s / 17, py = y + hy * s / 17;
+    i ? c.lineTo(px, py) : c.moveTo(px, py);
+  }
+  c.closePath();
+}
+function heart(c, x, y, s, fill, alpha = 1) {
+  c.save(); c.globalAlpha *= alpha; heartPath(c, x, y, s); c.fillStyle = fill; c.fill();
+  c.globalAlpha *= .5; c.fillStyle = '#fff'; c.beginPath(); c.ellipse(x - s * .45, y - s * .35, s * .16, s * .1, -.6, 0, TAU); c.fill();
+  c.restore();
+}
+const MOONC = document.createElement('canvas'); MOONC.width = MOONC.height = 600;
+function crescent(c, x, y, r, a, rot = -.35) {
+  const m = MOONC.getContext('2d'); m.clearRect(0, 0, 600, 600);
+  const g = m.createRadialGradient(270, 270, 10, 300, 300, r);
+  g.addColorStop(0, '#fff1f5'); g.addColorStop(.6, '#ffc2d4'); g.addColorStop(1, '#ff8fb1');
+  m.fillStyle = g; m.beginPath(); m.arc(300, 300, r, 0, TAU); m.fill();
+  m.globalCompositeOperation = 'destination-out';
+  m.beginPath(); m.arc(300 + r * .42, 300 - r * .2, r * .88, 0, TAU); m.fill();
+  m.globalCompositeOperation = 'source-over';
+  c.save(); c.globalAlpha *= a; glow(c, x, y, r * 2.6, 'rgba(255,150,190,A)', .35);
+  c.translate(x, y); c.rotate(rot); c.drawImage(MOONC, -300, -300); c.restore();
+}
+
+// ---------- tipografi ----------
+function setFont(c, f) { c.font = f; }
+// teks naik perkataan demi perkataan, bertopeng
+function words(str, x, y, o) {
+  const c = X, size = o.size, t = o.t, t0 = o.t0, stag = o.stag ?? .07, dur = o.dur ?? .75;
+  c.save(); setFont(c, o.font); c.letterSpacing = (o.ls || 0) + 'px'; c.textBaseline = 'alphabetic';
+  const ws = str.split(' '); const sp = c.measureText(' ').width;
+  const wd = ws.map(w => c.measureText(w).width); const total = wd.reduce((a, b) => a + b, 0) + sp * (ws.length - 1);
+  let cx = o.align === 'left' ? x : x - total / 2;
+  c.beginPath(); c.rect(cx - 40, y - size * 1.12, total + 80, size * 1.5); c.clip();
+  ws.forEach((w, i) => {
+    const p = clamp((t - t0 - i * stag) / dur); const e = o5(p);
+    if (p > 0) {
+      c.save(); c.globalAlpha *= clamp(p * 2.2) * (o.alpha ?? 1);
+      c.translate(cx + wd[i] / 2, y + (1 - e) * size * 1.05); c.rotate((1 - e) * .08);
+      if (o.shadow) { c.shadowColor = o.shadow; c.shadowBlur = 24; }
+      c.fillStyle = typeof o.color === 'function' ? o.color(c, -wd[i] / 2, wd[i]) : o.color;
+      c.textAlign = 'center'; c.fillText(w, 0, 0); c.restore();
+    }
+    cx += wd[i] + sp;
+  });
+  c.restore();
+  return ws.length * stag + dur;
+}
+function lines(arr, x, y, lh, o) {
+  let t0 = o.t0;
+  arr.forEach((s, i) => { words(s, x, y + i * lh, Object.assign({}, o, { t0 })); t0 += (o.lineGap ?? .22); });
+}
+function label(str, y, t0, t, col = C.rose) {
+  const c = X, p = o5(prog(t, t0, t0 + .9));
+  if (p <= 0) return;
+  c.save(); c.font = `700 30px ${SANS}`; c.letterSpacing = '9px'; c.textAlign = 'center';
+  const w = c.measureText(str).width;
+  c.globalAlpha *= p; c.fillStyle = col; c.fillText(str, 540 + 4.5, y + (1 - p) * 16);
+  c.strokeStyle = col; c.lineWidth = 2; const L0 = 60 * p;
+  c.beginPath(); c.moveTo(540 - w / 2 - 24, y - 10); c.lineTo(540 - w / 2 - 24 - L0, y - 10);
+  c.moveTo(540 + w / 2 + 24, y - 10); c.lineTo(540 + w / 2 + 24 + L0, y - 10); c.stroke();
+  sparkle(c, 540 - w / 2 - 30 - L0, y - 10, 9 * p, col); sparkle(c, 540 + w / 2 + 30 + L0, y - 10, 9 * p, col);
+  c.restore();
+}
+function pill(str, x, y, t0, t) {
+  const c = X, s = spring(t - t0, .5, 2.2); if (s <= 0) return;
+  c.save(); c.font = `600 28px 'Fredoka',${SANS}`; c.letterSpacing = '1px';
+  const w = c.measureText(str).width + 56;
+  c.translate(x, y); c.scale(s, s); c.globalAlpha *= clamp((t - t0) * 4);
+  c.beginPath(); c.roundRect(-w / 2, -26, w, 52, 26); c.fillStyle = 'rgba(255,255,255,0.09)'; c.fill();
+  c.lineWidth = 2; c.strokeStyle = 'rgba(255,214,228,0.45)'; c.stroke();
+  c.fillStyle = 'rgba(255,236,242,0.92)'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(str, 0, 2); c.restore();
+}
+// kaligrafi Arab dilukis dari kanan ke kiri
+const TXT = document.createElement('canvas'); TXT.width = 1080; TXT.height = 520; const TC = TXT.getContext('2d');
+function arabic(str, x, y, size, font, p, o = {}) {
+  if (p <= 0) return;
+  TC.clearRect(0, 0, 1080, 520);
+  TC.font = `${o.weight || 700} ${size}px ${font}`; TC.textAlign = 'center'; TC.textBaseline = 'alphabetic'; TC.direction = 'rtl';
+  const g = TC.createLinearGradient(0, 260 - size * .7, 0, 260 + size * .3);
+  (o.grad || [C.goldL, C.gold, C.goldD]).forEach((col, i, a) => g.addColorStop(i / (a.length - 1), col));
+  TC.fillStyle = g; TC.shadowColor = o.glow || 'rgba(255,190,120,0.65)'; TC.shadowBlur = o.blur ?? 30;
+  TC.fillText(str, 540, 300);
+  const w = Math.min(1060, TC.measureText(str).width + 60);
+  const right = 540 + w / 2, edge = right - w * io(p);
+  const c = X; c.save(); c.globalAlpha *= (o.alpha ?? 1);
+  c.beginPath(); c.rect(edge, y - 300, right - edge + 40, 520); c.clip();
+  c.drawImage(TXT, x - 540, y - 300); c.restore();
+  if (p < 1) { c.save(); glow(c, edge, y - size * .25, 70, 'rgba(255,220,170,A)', .7); sparkle(c, edge, y - size * .25, 26, '#fff4dc'); c.restore(); }
+}
+function counter(v, x, y, size, col, t) {
+  const c = X; c.save(); c.font = `600 ${size}px ${SERIF}`; c.textAlign = 'center'; c.fillStyle = col;
+  c.shadowColor = 'rgba(255,190,120,0.5)'; c.shadowBlur = 30;
+  c.fillText(Math.round(v).toLocaleString('en-US'), x, y); c.restore();
+}
+// warna kecerunan teks
+const goldText = (c, x0, w) => { const g = c.createLinearGradient(x0, -60, x0 + w, 10); g.addColorStop(0, C.goldL); g.addColorStop(.5, C.gold); g.addColorStop(1, '#ffd9a0'); return g; };
+const roseText = (c, x0, w) => { const g = c.createLinearGradient(x0, -80, x0 + w, 10); g.addColorStop(0, '#ffd6e3'); g.addColorStop(.5, C.rose); g.addColorStop(1, '#ff6f9e'); return g; };
+
+// ============================================================
+//  WATAK: PELITA (pencerita senyap)
+// ============================================================
+function pelita(c, x, y, s, st) {
+  const { mood = 'dot', blink = 0, blush = .5, glowA = 1, t = 0 } = st;
+  c.save(); c.translate(x, y); c.scale(s, s); c.rotate(Math.sin(t * 1.3) * .045);
+  glow(c, 0, 0, 230 * glowA, 'rgba(255,196,120,A)', .38);
+  glow(c, 0, 0, 120, 'rgba(255,230,170,A)', .3 * glowA);
+  // gelang & kubah
+  c.lineWidth = 7; c.strokeStyle = C.goldD; c.beginPath(); c.arc(0, -128, 15, 0, TAU); c.stroke();
+  let g = c.createLinearGradient(-60, -115, 60, -70); g.addColorStop(0, '#ffe39e'); g.addColorStop(1, '#d99a45');
+  c.fillStyle = g; c.beginPath(); c.moveTo(-58, -72); c.bezierCurveTo(-52, -108, -18, -116, 0, -116); c.bezierCurveTo(18, -116, 52, -108, 58, -72); c.closePath(); c.fill();
+  c.fillStyle = '#ffe9b8'; c.beginPath(); c.ellipse(-20, -96, 12, 6, -.4, 0, TAU); c.fill();
+  c.beginPath(); c.roundRect(-66, -80, 132, 18, 9); c.fillStyle = '#e4a650'; c.fill();
+  // badan kaca
+  g = c.createRadialGradient(-8, -10, 8, 0, 0, 80); g.addColorStop(0, '#fffbe6'); g.addColorStop(.55, '#ffe6a6'); g.addColorStop(1, '#ffc56a');
+  c.fillStyle = g; c.beginPath(); c.moveTo(-52, -62); c.bezierCurveTo(-74, -30, -74, 30, -52, 62); c.lineTo(52, 62); c.bezierCurveTo(74, 30, 74, -30, 52, -62); c.closePath(); c.fill();
+  c.lineWidth = 5; c.strokeStyle = '#e1a24c'; c.stroke();
+  c.globalAlpha = .28; c.lineWidth = 3; c.beginPath(); c.moveTo(-26, -62); c.quadraticCurveTo(-38, 0, -26, 62); c.moveTo(26, -62); c.quadraticCurveTo(38, 0, 26, 62); c.stroke(); c.globalAlpha = 1;
+  c.fillStyle = 'rgba(255,255,255,0.75)'; c.beginPath(); c.ellipse(-38, -30, 6, 16, .25, 0, TAU); c.fill();
+  // tapak
+  c.beginPath(); c.roundRect(-60, 56, 120, 20, 10); c.fillStyle = '#e4a650'; c.fill();
+  c.beginPath(); c.roundRect(-34, 74, 68, 14, 7); c.fillStyle = '#c98f3a'; c.fill();
+  // pipi merah (Humaira)
+  c.fillStyle = `rgba(255,105,150,${.25 + .5 * blush})`;
+  c.beginPath(); c.ellipse(-35, 16, 13, 8, 0, 0, TAU); c.ellipse(35, 16, 13, 8, 0, 0, TAU); c.fill();
+  // mata
+  c.fillStyle = C.ink; c.strokeStyle = C.ink; c.lineCap = 'round'; c.lineWidth = 5.5;
+  const ey = 0;
+  if (mood === 'happy') {
+    c.beginPath(); c.arc(-21, ey + 4, 9, Math.PI * 1.1, Math.PI * 1.9); c.stroke();
+    c.beginPath(); c.arc(21, ey + 4, 9, Math.PI * 1.1, Math.PI * 1.9); c.stroke();
+  } else {
+    const r = mood === 'wow' ? 9.5 : 8, sy = Math.max(.08, 1 - blink);
+    [-21, 21].forEach(ex => {
+      c.save(); c.translate(ex, ey); c.scale(1, sy); c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.fillStyle = '#fff'; c.beginPath(); c.arc(-2.5, -3, r * .34, 0, TAU); c.fill(); c.restore();
+    });
+    if (mood === 'sad') { c.lineWidth = 3.5; c.beginPath(); c.moveTo(-31, -16); c.lineTo(-13, -12); c.moveTo(31, -16); c.lineTo(13, -12); c.stroke(); }
+  }
+  // mulut
+  c.lineWidth = 4.5;
+  if (mood === 'wow') { c.beginPath(); c.ellipse(0, 22, 6, 8, 0, 0, TAU); c.fill(); }
+  else if (mood === 'sad') { c.beginPath(); c.arc(0, 28, 8, Math.PI * 1.2, Math.PI * 1.8); c.stroke(); }
+  else { c.beginPath(); c.arc(0, 14, 8, Math.PI * .15, Math.PI * .85); c.stroke(); }
+  c.restore();
+}
+// kedudukan pelita mengikut masa
+const PK = [
+  [1.8, 540, 1440, 1.05], [5.1, 540, 1440, 1.05], [6.1, 860, 960, .72], [11.0, 860, 960, .72], [12.0, 900, 1170, .58],
+  [18.0, 900, 1170, .58], [19.0, 500, 1302, .44], [24.0, 500, 1302, .44], [25.0, 850, 1262, .6], [30.0, 850, 1262, .6],
+  [31.0, 905, 330, .55], [37.0, 905, 330, .55], [38.0, 860, 1400, .6], [41.0, 860, 1400, .6], [42.0, 540, 1190, 1.05],
+  [45.0, 540, 1190, 1.05], [46.0, 540, 905, .72], [49.6, 540, 905, .72], [50.5, 870, 1180, .58], [53.6, 870, 1180, .58],
+  [54.5, 540, 1290, .9], [57.6, 540, 1290, .9], [58.5, 870, 1170, .58], [61.6, 870, 1170, .58], [62.6, 885, 1235, .56],
+  [66.0, 885, 1235, .56], [67.6, 730, 300, .14], [70, 730, 300, .14]
+];
+function pelitaState(t) {
+  let x, y, s;
+  if (t < 1.8) { // jatuh dari atas dengan spring
+    const k = spring(t - .35, .42, 1.25); x = 540; y = lerp(-260, 1440, k); s = 1.05;
+  } else {
+    let i = 0; while (i < PK.length - 2 && t >= PK[i + 1][0]) i++;
+    const a = PK[i], b = PK[i + 1], p = io(prog(t, a[0], b[0]));
+    x = lerp(a[1], b[1], p); y = lerp(a[2], b[2], p) - Math.sin(Math.PI * p) * (Math.abs(b[1] - a[1]) + Math.abs(b[2] - a[2]) > 10 ? 90 : 0); s = Math.exp(lerp(Math.log(a[3]), Math.log(b[3]), p));
+  }
+  y += Math.sin(t * 2.1) * 9 * s;
+  if (t > 18.6 && t < 24.2) { y += Math.abs(Math.sin(t * 5.2)) * -6; } // ikut langkah unta
+  const moods = [[7.4, 10.8, 'happy'], [27.0, 30.6, 'happy'], [32.3, 33.4, 'happy'], [36.0, 37.4, 'happy'], [39.4, 41.3, 'happy'], [42.1, 43.3, 'wow'],
+  [43.3, 45.4, 'happy'], [46.6, 47.7, 'wow'], [51.6, 53.6, 'happy'], [54.4, 56.0, 'sad'], [56.3, 57.9, 'happy'], [59.8, 61.7, 'happy'], [64.2, 70, 'happy']];
+  let mood = 'dot'; for (const m of moods) if (t >= m[0] && t < m[1]) mood = m[2];
+  const bp = (t + .8) % 3.4; const blink = bp < .16 ? Math.sin(bp / .16 * Math.PI) : 0;
+  let blush = .55; if (t > 5.6 && t < 11.4) blush = 1; if (t > 26.8 && t < 30.5) blush = 1;
+  let glowA = 1; if (t > 45.5 && t < 50) glowA = 1 + .5 * o3(prog(t, 46, 49.5)); if (t > 54.3 && t < 56.2) glowA = .55; if (t > 41.5 && t < 45.5) glowA = 1.4;
+  let a = 1; if (t > 66) a = 1 - prog(t, 67.0, 67.7);
+  return { x, y, s, mood, blink, blush, glowA, a, t };
+}
+
+// ============================================================
+//  ILUSTRASI
+// ============================================================
+function dune(c, yb, amp, f, ph, col, off = 0) {
+  c.beginPath(); c.moveTo(0, H);
+  for (let x = 0; x <= W; x += 12) { const xx = x + off; c.lineTo(x, yb - amp * (Math.sin(xx * f + ph) * .6 + Math.sin(xx * f * 2.3 + ph * 1.7) * .25 + Math.sin(xx * f * .45 + ph * .3) * .5)); }
+  c.lineTo(W, H); c.closePath(); c.fillStyle = col; c.fill();
+}
+function camel(c, x, y, s, ph) {
+  c.save(); c.translate(x, y); c.scale(s, s);
+  c.fillStyle = 'rgba(60,20,40,0.22)'; c.beginPath(); c.ellipse(0, 110, 130, 16, 0, 0, TAU); c.fill();
+  const bob = -Math.abs(Math.sin(ph)) * 6; c.translate(0, bob);
+  const leg = (lx, a, col) => { c.save(); c.translate(lx, 25); c.rotate(a); c.strokeStyle = col; c.lineWidth = 20; c.lineCap = 'round'; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, 46); c.stroke(); c.translate(0, 46); c.rotate(-Math.max(0, a) * 1.2); c.beginPath(); c.moveTo(0, 0); c.lineTo(0, 36); c.stroke(); c.fillStyle = col; c.beginPath(); c.ellipse(4, 40, 13, 7, 0, 0, TAU); c.fill(); c.restore(); };
+  leg(-62, Math.sin(ph + Math.PI) * .38, '#cf9058'); leg(48, Math.sin(ph) * .38, '#cf9058');
+  // ekor
+  c.strokeStyle = '#e2a96c'; c.lineWidth = 8; c.lineCap = 'round'; c.beginPath(); c.moveTo(-96, -16); c.quadraticCurveTo(-118, 0 + Math.sin(ph * 2) * 6, -112, 26); c.stroke();
+  // badan
+  let g = c.createLinearGradient(0, -110, 0, 50); g.addColorStop(0, '#f6cb8f'); g.addColorStop(1, '#e0a265');
+  c.fillStyle = g; c.beginPath(); c.ellipse(0, -8, 100, 54, 0, 0, TAU); c.fill();
+  c.beginPath(); c.ellipse(-12, -58, 54, 46, 0, 0, TAU); c.fill();
+  // leher & kepala
+  c.strokeStyle = '#efbb7f'; c.lineWidth = 38; c.beginPath(); c.moveTo(70, -20); c.quadraticCurveTo(110, -40, 118, -112); c.stroke();
+  c.fillStyle = '#f3c387';
+  c.beginPath(); c.ellipse(136, -128, 40, 28, .1, 0, TAU); c.fill();
+  c.beginPath(); c.ellipse(166, -118, 22, 18, .1, 0, TAU); c.fill();
+  c.beginPath(); c.ellipse(112, -152, 9, 15, -.6, 0, TAU); c.fill();
+  c.fillStyle = C.ink; c.beginPath(); c.arc(140, -134, 6, 0, TAU); c.fill();
+  c.fillStyle = '#fff'; c.beginPath(); c.arc(138, -136, 2.2, 0, TAU); c.fill();
+  c.fillStyle = 'rgba(255,110,150,0.55)'; c.beginPath(); c.ellipse(150, -114, 10, 6, 0, 0, TAU); c.fill();
+  c.strokeStyle = C.ink; c.lineWidth = 3; c.beginPath(); c.arc(170, -112, 6, Math.PI * .2, Math.PI * .8); c.stroke();
+  // pelana
+  c.fillStyle = C.roseD; c.beginPath(); c.roundRect(-62, -96, 100, 70, 22); c.fill();
+  c.fillStyle = C.rose; c.beginPath(); c.roundRect(-56, -92, 88, 50, 18); c.fill();
+  c.strokeStyle = C.gold; c.lineWidth = 4; c.setLineDash([2, 9]); c.beginPath(); c.roundRect(-50, -86, 76, 38, 14); c.stroke(); c.setLineDash([]);
+  for (let i = 0; i < 4; i++) { c.fillStyle = C.gold; c.beginPath(); c.arc(-50 + i * 25, -24 + Math.sin(ph * 2 + i) * 2, 5, 0, TAU); c.fill(); }
+  // kaki dekat
+  leg(-40, Math.sin(ph) * .38, '#eab071'); leg(70, Math.sin(ph + Math.PI) * .38, '#eab071');
+  c.restore();
+}
+function kaabah(c, x, y, s) {
+  c.save(); c.translate(x, y); c.scale(s, s);
+  c.fillStyle = '#2a2230'; c.beginPath(); c.moveTo(40, -90); c.lineTo(66, -104); c.lineTo(66, -10); c.lineTo(40, 0); c.closePath(); c.fill();
+  c.fillStyle = '#17121c'; c.fillRect(-50, -90, 90, 90);
+  c.fillStyle = C.gold; c.fillRect(-50, -72, 90, 9); c.beginPath(); c.moveTo(40, -72); c.lineTo(66, -86); c.lineTo(66, -77); c.lineTo(40, -63); c.fill();
+  c.fillStyle = '#2a2230'; c.beginPath(); c.moveTo(-50, -90); c.lineTo(-24, -104); c.lineTo(66, -104); c.lineTo(40, -90); c.closePath(); c.fill();
+  c.fillStyle = C.goldD; c.fillRect(10, -42, 16, 30);
+  c.restore();
+}
+function house(c, x, y, w, h, col, dome) {
+  c.fillStyle = col; c.beginPath(); c.roundRect(x - w / 2, y - h, w, h, 8); c.fill();
+  if (dome) { c.beginPath(); c.arc(x, y - h, w * .32, Math.PI, 0); c.fill(); }
+  c.fillStyle = 'rgba(255,214,140,0.85)'; c.beginPath(); c.roundRect(x - 8, y - h * .62, 16, 22, [8, 8, 2, 2]); c.fill();
+}
+function rose(c, x, y, r, p, t) {
+  c.save(); c.translate(x, y);
+  // batang & daun
+  c.strokeStyle = '#4f9e74'; c.lineWidth = 12; c.lineCap = 'round';
+  const st = o5(prog(p, 0, .4));
+  c.beginPath(); c.moveTo(0, r * .2); c.quadraticCurveTo(-r * .2, r * 1.2, 0, r * .2 + r * 1.9 * st); c.stroke();
+  [[-1, .9], [1, 1.35]].forEach(([d, yy], i) => {
+    const lp = o5(prog(p, .25 + i * .1, .6 + i * .1)); if (lp <= 0) return;
+    c.save(); c.translate(-r * .1, r * yy); c.rotate(d * .9 + Math.sin(t * 1.5 + i) * .06); c.scale(lp, lp);
+    c.fillStyle = '#66c08f'; c.beginPath(); c.ellipse(d * r * .35, 0, r * .38, r * .16, 0, 0, TAU); c.fill(); c.restore();
+  });
+  // kelopak berbentuk hati (dua lapis) + putik emas
+  [[5, 1.0, '#ff6f9e', '#ffd3e1', 0], [5, .66, '#ff9dbd', '#fff0f5', .63]].forEach(([n, sc, col, hi, rot], li) => {
+    for (let k = 0; k < n; k++) {
+      const pp = o5(prog(p, .2 + li * .18 + k * .04, .62 + li * .18 + k * .04)); if (pp <= 0) continue;
+      const a = k / n * TAU + rot + Math.sin(t * .9) * .05;
+      c.save(); c.rotate(a); c.translate(0, -r * sc * .5); c.rotate(Math.PI); c.scale(pp, pp);
+      const g = c.createLinearGradient(0, -r * sc * .5, 0, r * sc * .5); g.addColorStop(0, hi); g.addColorStop(1, col);
+      heart(c, 0, 0, r * sc * .62, g, 1); c.restore();
+    }
+  });
+  const cp = spring(p * 2.2 - 1.2, .45, 1.2);
+  if (cp > 0) { c.save(); c.scale(cp, cp); glow(c, 0, 0, r * .5, 'rgba(255,220,140,A)', .8);
+    c.fillStyle = C.gold; c.beginPath(); c.arc(0, 0, r * .2, 0, TAU); c.fill();
+    c.fillStyle = C.goldL; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + t * .4; c.beginPath(); c.arc(Math.cos(a) * r * .12, Math.sin(a) * r * .12, r * .035, 0, TAU); c.fill(); }
+    c.restore(); }
+  c.restore();
+}
+function cup(c, x, y, s, t) {
+  c.save(); c.translate(x, y); c.scale(s, s);
+  c.fillStyle = 'rgba(40,10,30,0.25)'; c.beginPath(); c.ellipse(0, 128, 190, 26, 0, 0, TAU); c.fill();
+  c.fillStyle = '#ffe9dc'; c.beginPath(); c.ellipse(0, 112, 180, 30, 0, 0, TAU); c.fill();
+  c.fillStyle = '#f5cfc0'; c.beginPath(); c.ellipse(0, 108, 120, 16, 0, 0, TAU); c.fill();
+  // pemegang
+  c.strokeStyle = '#ffeede'; c.lineWidth = 26; c.beginPath(); c.arc(118, 0, 52, -1.2, 1.25); c.stroke();
+  let g = c.createLinearGradient(-110, 0, 110, 0); g.addColorStop(0, '#fff8f0'); g.addColorStop(.6, '#ffeadb'); g.addColorStop(1, '#f6d2c0');
+  c.fillStyle = g; c.beginPath(); c.moveTo(-120, -80); c.lineTo(120, -80); c.bezierCurveTo(118, 40, 80, 104, 0, 104); c.bezierCurveTo(-80, 104, -118, 40, -120, -80); c.closePath(); c.fill();
+  c.fillStyle = C.rose; c.beginPath(); c.moveTo(-119, -40); c.lineTo(119, -40); c.lineTo(117, -16); c.lineTo(-117, -16); c.closePath(); c.fill();
+  for (let i = 0; i < 7; i++) heart(c, -84 + i * 28, -28, 9, '#fff', .8);
+  c.fillStyle = '#ffeee2'; c.beginPath(); c.ellipse(0, -80, 120, 22, 0, 0, TAU); c.fill();
+  c.fillStyle = '#9a5634'; c.beginPath(); c.ellipse(0, -78, 104, 15, 0, 0, TAU); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.3)'; c.beginPath(); c.ellipse(-30, -80, 34, 4, 0, 0, TAU); c.fill();
+  // wap
+  c.strokeStyle = 'rgba(255,240,245,0.45)'; c.lineWidth = 9; c.lineCap = 'round';
+  for (let k = 0; k < 3; k++) {
+    c.beginPath(); for (let i = 0; i <= 20; i++) { const yy = -100 - i * 9; const xx = -40 + k * 40 + Math.sin(i * .5 - t * 3 + k) * 12; i ? c.lineTo(xx, yy) : c.moveTo(xx, yy); }
+    c.globalAlpha = .6 + .4 * Math.sin(t * 2 + k); c.stroke();
+  }
+  c.restore();
+}
+function book(c, x, y, w, h, col, band) {
+  c.fillStyle = 'rgba(30,10,30,0.25)'; c.beginPath(); c.roundRect(x - w / 2 + 6, y - h / 2 + 8, w, h, 10); c.fill();
+  c.fillStyle = '#fff3e2'; c.beginPath(); c.roundRect(x - w / 2 + 10, y - h / 2 + 6, w - 14, h - 8, 6); c.fill();
+  c.fillStyle = col; c.beginPath(); c.roundRect(x - w / 2, y - h / 2, w, h, 10); c.fill();
+  c.fillStyle = band; c.fillRect(x - w / 2 + 26, y - h / 2, 14, h); c.fillRect(x + w / 2 - 40, y - h / 2, 14, h);
+  c.fillStyle = 'rgba(255,255,255,0.18)'; c.beginPath(); c.roundRect(x - w / 2 + 8, y - h / 2 + 6, w - 16, 8, 4); c.fill();
+}
+function coin(c, x, y, r, rot) {
+  const sx = Math.max(.12, Math.abs(Math.cos(rot)));
+  c.save(); c.translate(x, y); c.scale(sx, 1);
+  const g = c.createLinearGradient(-r, -r, r, r); g.addColorStop(0, '#ffffff'); g.addColorStop(.5, '#d9dbe6'); g.addColorStop(1, '#9fa3b8');
+  c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+  c.strokeStyle = 'rgba(120,120,150,0.8)'; c.lineWidth = r * .1; c.beginPath(); c.arc(0, 0, r * .72, 0, TAU); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.8)'; c.beginPath(); c.ellipse(-r * .3, -r * .35, r * .2, r * .1, -.7, 0, TAU); c.fill();
+  c.restore();
+}
+function cloud(c, x, y, s, col) {
+  c.save(); c.translate(x, y); c.scale(s, s); c.fillStyle = col; c.beginPath();
+  [[-90, 10, 50], [-40, -20, 70], [30, -30, 80], [95, 0, 55], [0, 20, 70]].forEach(([a, b, r]) => { c.moveTo(a + r, b); c.arc(a, b, r, 0, TAU); });
+  c.fill(); c.restore();
+}
+function masjid(c, t, a) {
+  c.save(); c.globalAlpha *= a;
+  const base = 1690;
+  const sil = '#3a2a5c', sil2 = '#2c2048';
+  // menara
+  const minaret = (x, h, w) => {
+    c.fillStyle = sil2; c.fillRect(x - w / 2, base - h, w, h);
+    c.fillStyle = sil; c.beginPath(); c.roundRect(x - w / 2 - 10, base - h * .62, w + 20, 14, 6); c.roundRect(x - w / 2 - 8, base - h * .86, w + 16, 12, 6); c.fill();
+    c.fillStyle = sil2; c.beginPath(); c.moveTo(x - w / 2, base - h); c.lineTo(x, base - h - 70); c.lineTo(x + w / 2, base - h); c.fill();
+    c.fillStyle = C.gold; c.beginPath(); c.arc(x, base - h - 78, 6, 0, TAU); c.fill();
+    c.fillStyle = 'rgba(255,214,140,0.8)'; for (let k = 0; k < 3; k++) { c.beginPath(); c.roundRect(x - 5, base - h * .5 + k * 60, 10, 22, [5, 5, 1, 1]); c.fill(); }
+  };
+  minaret(150, 420, 42); minaret(930, 420, 42); minaret(330, 330, 34); minaret(760, 330, 34);
+  // dinding
+  c.fillStyle = sil; c.fillRect(0, base - 150, W, 300);
+  c.fillStyle = 'rgba(255,214,140,0.85)';
+  for (let i = 0; i < 12; i++) { const x = 40 + i * 90; c.beginPath(); c.moveTo(x, base - 30); c.lineTo(x, base - 80); c.arc(x + 22, base - 80, 22, Math.PI, 0); c.lineTo(x + 44, base - 30); c.closePath(); c.fill(); }
+  // kubah hijau
+  const dx = 560, dy = base - 150;
+  c.fillStyle = sil2; c.fillRect(dx - 110, dy - 70, 220, 72);
+  const g = c.createLinearGradient(dx - 120, dy - 260, dx + 120, dy - 60); g.addColorStop(0, '#8ff0c4'); g.addColorStop(.45, '#33b783'); g.addColorStop(1, '#1d7a58');
+  c.fillStyle = g; c.beginPath(); c.moveTo(dx - 118, dy - 66); c.bezierCurveTo(dx - 126, dy - 190, dx - 40, dy - 250, dx, dy - 285); c.bezierCurveTo(dx + 40, dy - 250, dx + 126, dy - 190, dx + 118, dy - 66); c.closePath(); c.fill();
+  glow(c, dx, dy - 160, 260, 'rgba(120,240,190,A)', .18 + .06 * Math.sin(t * 2));
+  c.strokeStyle = C.gold; c.lineWidth = 6; c.beginPath(); c.moveTo(dx, dy - 285); c.lineTo(dx, dy - 320); c.stroke();
+  c.fillStyle = C.gold; c.beginPath(); c.arc(dx, dy - 338, 15, .3, TAU - .3); c.arc(dx + 6, dy - 342, 12, TAU - .4, .4, true); c.fill();
+  c.restore();
+}
+
+// ============================================================
+//  BABAK
+// ============================================================
+const SC = [
+  [0.0, 5.8, s1], [5.4, 11.8, s2], [11.4, 18.8, s3], [18.4, 24.8, s4], [24.4, 30.8, s5], [30.4, 37.8, s6],
+  [37.4, 41.8, s7], [41.4, 45.8, s8], [45.4, 50.3, s9], [49.9, 54.3, s9b], [53.9, 58.3, s10], [57.9, 62.3, s11], [61.9, 70.5, s12]
+];
+const blockA = (t, a, b, fi = .01, fo = .45) => clamp(prog(t, a, a + fi) * (1 - io(prog(t, b - fo, b))));
+
+// 1. Cangkuk: gelaran di langit malam
+function s1(t) {
+  const c = X;
+  const mr = o5(prog(t, -.5, 2.2));
+  crescent(c, 540, lerp(640, 520, mr), 120, mr, -.35 + Math.sin(t * .4) * .03);
+  arabic('الحُمَيْرَاء', 540, 880, 190, "'Ruqaa'", prog(t, 1.0, 2.7));
+  label('AL-HUMAIRA', 990, 2.4, t, C.rose);
+  lines(['Siapakah pemilik', 'gelaran indah ini?'], 540, 1112, 76, { t0: 3.0, t, size: 66, font: `italic 600 66px ${SERIF}`, color: C.cream });
+  for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + t * .3; const p = o5(prog(t, 1.6 + i * .08, 2.6 + i * .08)); sparkle(c, 540 + Math.cos(a) * 200 * p, 520 + Math.sin(a) * 200 * p, 10 * (1 - prog(t, 3, 5.5)) * p, '#ffe3ee'); }
+}
+// 2. Makna gelaran
+function s2(t) {
+  const c = X, lt = t - 5.4;
+  label('MAKNA GELARAN', 340, 5.8, t);
+  words('Humaira', 540, 520, { t0: 6.0, t, size: 150, font: `italic 600 150px ${SERIF}`, color: roseText, stag: .1, shadow: 'rgba(255,120,170,0.5)' });
+  words('“yang kemerah-merahan”', 540, 625, { t0: 6.5, t, size: 54, font: `italic 600 54px ${SERIF}`, color: C.cream });
+  glow(c, 540, 960, 300, 'rgba(255,120,170,A)', .25 * o5(prog(t, 6.6, 8)));
+  rose(c, 540, 930, 150, prog(t, 6.6, 8.6), t);
+  for (let i = 0; i < 7; i++) { const tt = (lt * .45 + i / 7) % 1; const x = 540 + Math.sin(i * 2.3 + lt) * 230; heart(c, x, 1050 - tt * 520, 14 + (i % 3) * 6, C.rose, Math.sin(tt * Math.PI) * o3(prog(t, 7.5, 8.5))); }
+  lines(['Panggilan mesra Rasulullah ﷺ,', 'merujuk wajahnya yang cerah', 'kemerah-merahan.'], 540, 1340, 62, { t0: 7.6, t, size: 44, font: `600 44px ${SANS}`, color: C.cream, stag: .05 });
+}
+// 3. Siapa dia
+function s3(t) {
+  const c = X;
+  label('SIAPA DIA', 330, 11.8, t);
+  arabic('عَائِشَة', 540, 545, 180, "'Ruqaa'", prog(t, 12.0, 13.2));
+  words('Aisyah binti Abu Bakar', 540, 668, { t0: 12.7, t, size: 70, font: `600 70px ${SERIF}`, color: C.cream, stag: .08 });
+  // salasilah
+  const lp = io(prog(t, 13.6, 14.6));
+  c.save(); c.strokeStyle = 'rgba(255,214,228,0.6)'; c.lineWidth = 4; c.setLineDash([10, 12]); c.lineDashOffset = -t * 30;
+  c.beginPath(); c.moveTo(320, 860); c.lineTo(lerp(320, 540, lp), lerp(860, 1010, lp)); c.moveTo(760, 860); c.lineTo(lerp(760, 540, lp), lerp(860, 1010, lp)); c.stroke(); c.restore();
+  const node = (x, y, r, t0, top, sub, col, ic) => {
+    const s = spring(t - t0, .5, 1.8); if (s <= 0) return;
+    c.save(); c.translate(x, y); c.scale(s, s);
+    glow(c, 0, 0, r * 1.9, col === 'rose' ? 'rgba(255,130,175,A)' : 'rgba(255,200,120,A)', .35);
+    const g = c.createLinearGradient(0, -r, 0, r); g.addColorStop(0, col === 'rose' ? '#ffb3cb' : '#ffe2a6'); g.addColorStop(1, col === 'rose' ? C.roseD : C.goldD);
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    c.lineWidth = 5; c.strokeStyle = 'rgba(255,255,255,0.7)'; c.stroke();
+    if (ic === 'heart') heart(c, 0, 0, r * .55, '#fff', .95); else { sparkle(c, 0, 0, r * .55, '#fff'); }
+    c.restore();
+    c.save(); c.globalAlpha *= clamp((t - t0 - .2) * 3); c.textAlign = 'center'; c.fillStyle = C.cream; c.font = `700 36px ${SANS}`; c.fillText(top, x, y + r + 52);
+    if (sub) { c.font = `500 28px ${SANS}`; c.fillStyle = 'rgba(255,230,238,0.75)'; c.fillText(sub, x, y + r + 90); } c.restore();
+  };
+  node(320, 850, 62, 13.3, 'Abu Bakar', 'as-Siddiq', 'gold', 'star');
+  node(760, 850, 62, 13.45, 'Ummu Ruman', '', 'gold', 'star');
+  node(540, 1030, 74, 14.4, '', '', 'rose', 'heart');
+  // Makkah
+  const sp = o5(prog(t, 14.6, 15.8));
+  c.save(); c.translate(0, (1 - sp) * 120); c.globalAlpha *= sp;
+  c.fillStyle = '#3c2050'; c.beginPath(); c.moveTo(0, 1560); c.lineTo(160, 1380); c.lineTo(300, 1500); c.lineTo(470, 1350); c.lineTo(640, 1500); c.lineTo(820, 1370); c.lineTo(1080, 1540); c.lineTo(1080, 1920); c.lineTo(0, 1920); c.fill();
+  c.fillStyle = '#4b2a5e'; c.fillRect(0, 1560, W, 400);
+  [[110, 70, 90, '#f3d3b0', 0], [200, 80, 120, '#eac39f', 1], [300, 64, 80, '#f6dcc0', 0], [800, 72, 110, '#eac39f', 1], [900, 66, 84, '#f6dcc0', 0], [990, 80, 120, '#f3d3b0', 0], [700, 60, 70, '#f3d3b0', 0]].forEach(h => house(c, h[0], 1580, h[1], h[2], h[3], h[4]));
+  kaabah(c, 540, 1585, 1.25);
+  glow(c, 540, 1520, 200, 'rgba(255,214,150,A)', .25);
+  c.restore();
+  lines(['Lahir di Makkah, puteri kepada', 'sahabat paling setia Rasulullah ﷺ.'], 540, 1258, 56, { t0: 15.2, t, size: 40, font: `600 40px ${SANS}`, color: C.cream, stag: .05 });
+}
+// 4. Hijrah
+function s4(t) {
+  const c = X, lt = t - 18.4;
+  const off = lt * 260;
+  // bulan besar
+  glow(c, 800, 1010, 360, 'rgba(255,214,200,A)', .3);
+  { const g = c.createRadialGradient(760, 960, 20, 800, 1010, 140); g.addColorStop(0, '#fff8f0'); g.addColorStop(1, '#ffd9cf'); c.fillStyle = g; }
+  c.beginPath(); c.arc(800, 1010, 140, 0, TAU); c.fill();
+  c.fillStyle = 'rgba(230,170,170,0.35)'; [[760, 980, 22], [840, 1050, 16], [820, 960, 11], [770, 1060, 9]].forEach(([x, y, r]) => { c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); });
+  dune(c, 1290, 70, .004, 1.0, '#c76a6a', off * .3);
+  // pohon tamar jauh
+  for (let i = 0; i < 5; i++) {
+    const x = ((i * 300 - off * .3) % 1500 + 1500) % 1500 - 200; palm(c, x, 1250 - (i % 2) * 20, .7 + (i % 3) * .12, t + i);
+  }
+  dune(c, 1400, 80, .0032, 2.0, '#e08d6e', off * .6);
+  dune(c, 1560, 60, .0026, 3.1, '#f1ae7f', off);
+  // jejak
+  for (let i = 0; i < 12; i++) { const x = ((i * 110 - off) % 1320 + 1320) % 1320 - 120; c.fillStyle = 'rgba(160,80,60,0.35)'; c.beginPath(); c.ellipse(x, 1560 + (i % 2) * 14, 13, 6, 0, 0, TAU); c.fill(); }
+  camel(c, 510, 1455, 1.18, lt * 5.2);
+  // tajuk + peta mini
+  words('Hijrah', 540, 330, { t0: 18.8, t, size: 120, font: `italic 600 120px ${SERIF}`, color: goldText, shadow: 'rgba(255,190,120,0.45)' });
+  const mp = io(prog(t, 19.3, 23.6));
+  const mx0 = 220, mx1 = 860, my = 470, ma = o5(prog(t, 19.1, 19.8));
+  c.save(); c.globalAlpha *= ma;
+  c.strokeStyle = 'rgba(255,230,238,0.35)'; c.lineWidth = 4; c.setLineDash([4, 14]); c.lineCap = 'round';
+  c.beginPath(); c.moveTo(mx0, my); c.quadraticCurveTo(540, my - 70, mx1, my); c.stroke();
+  c.strokeStyle = C.rose; c.setLineDash([4, 14]); c.beginPath();
+  for (let i = 0; i <= 60 * mp; i++) { const u = i / 60; const x = (1 - u) * (1 - u) * mx0 + 2 * u * (1 - u) * 540 + u * u * mx1; const y = (1 - u) * (1 - u) * my + 2 * u * (1 - u) * (my - 70) + u * u * my; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); c.setLineDash([]);
+  const u = mp, px = (1 - u) * (1 - u) * mx0 + 2 * u * (1 - u) * 540 + u * u * mx1, py = (1 - u) * (1 - u) * my + 2 * u * (1 - u) * (my - 70) + u * u * my;
+  glow(c, px, py, 40, 'rgba(255,150,190,A)', .8); c.fillStyle = '#fff'; c.beginPath(); c.arc(px, py, 9, 0, TAU); c.fill();
+  [[mx0, 'Makkah', 0], [mx1, 'Madinah', 1]].forEach(([x, n, k]) => {
+    const on = k ? o5(prog(t, 23.2, 23.8)) : 1;
+    c.fillStyle = k ? (on > 0 ? C.greenL : 'rgba(255,255,255,0.5)') : C.gold; c.beginPath(); c.arc(x, my, 12 + 4 * on * k, 0, TAU); c.fill();
+    c.font = `700 34px ${SANS}`; c.textAlign = 'center'; c.fillStyle = C.cream; c.fillText(n, x, my + 58);
+  });
+  c.restore();
+  lines(['Menuju Madinah al-Munawwarah,', 'kota yang bercahaya.'], 540, 660, 56, { t0: 19.8, t, size: 42, font: `600 42px ${SANS}`, color: C.cream, stag: .05 });
+}
+function palm(c, x, y, s, t) {
+  c.save(); c.translate(x, y); c.scale(s, s); c.strokeStyle = '#7a3f55'; c.lineWidth = 14; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(10, -80, -6, -170); c.stroke();
+  c.fillStyle = '#6a3450';
+  for (let i = 0; i < 6; i++) { c.save(); c.translate(-6, -170); c.rotate(-Math.PI / 2 + (i - 2.5) * .55 + Math.sin(t * 1.2 + i) * .04); c.beginPath(); c.ellipse(55, 0, 60, 13, .25, 0, TAU); c.fill(); c.restore(); }
+  c.restore();
+}
+// 5. Paling dicintai
+function s5(t) {
+  const c = X;
+  label('KASIH', 330, 24.8, t);
+  lines(['“Siapakah manusia yang', 'paling engkau cintai?”'], 540, 470, 78, { t0: 25.0, t, size: 64, font: `italic 600 64px ${SERIF}`, color: C.cream });
+  words('Amr bin al-As bertanya kepada Rasulullah ﷺ', 540, 650, { t0: 25.9, t, size: 32, font: `500 32px ${SANS}`, color: 'rgba(255,230,238,0.78)', stag: .03 });
+  const hs = spring(t - 26.6, .38, 1.4) * (1 + .04 * Math.max(0, Math.sin((t - 26.6) * 7.5)) * clamp(t - 27.6));
+  if (hs > 0) {
+    c.save(); c.translate(540, 1010); c.scale(hs, hs);
+    glow(c, 0, 0, 420, 'rgba(255,90,150,A)', .4);
+    const g = c.createLinearGradient(0, -240, 0, 240); g.addColorStop(0, '#ff9ec0'); g.addColorStop(1, '#e2457c');
+    heart(c, 0, 0, 260, g, 1);
+    c.restore();
+    X = c; arabic('عَائِشَة', 540, 1040, 120, "'Ruqaa'", prog(t, 26.9, 27.7), { grad: ['#ffffff', '#fff1f6', '#ffd9e6'], glow: 'rgba(255,255,255,0.5)', blur: 18 });
+    // hati kecil terapung
+    for (let i = 0; i < 9; i++) { const tt = ((t - 26.8) * .5 + i / 9) % 1; if (t < 26.8) break; const a = i * 2.39; heart(c, 540 + Math.cos(a) * (260 + tt * 160), 1010 + Math.sin(a) * (200 + tt * 160) - tt * 80, 12 + (i % 3) * 5, i % 2 ? C.rose : C.goldL, Math.sin(tt * Math.PI) * .9); }
+  }
+  words('“Aisyah.”', 540, 1420, { t0: 27.3, t, size: 104, font: `italic 600 104px ${SERIF}`, color: roseText, shadow: 'rgba(255,120,170,0.6)' });
+  pill('Sahih al-Bukhari', 540, 1525, 28.2, t);
+}
+// 6. Berlumba
+function s6(t) {
+  const c = X;
+  // padang pasir
+  dune(c, 1060, 30, .004, .5, '#e7976f', 0);
+  c.fillStyle = '#f3b585'; c.fillRect(0, 1130, W, 800);
+  const trk = (x, w) => { c.fillStyle = 'rgba(255,240,225,0.25)'; c.beginPath(); c.roundRect(x - w / 2, 1150, w, 700, 30); c.fill(); };
+  trk(400, 150); trk(680, 150);
+  // garis penamat
+  c.save(); for (let i = 0; i < 16; i++) { c.fillStyle = i % 2 ? '#fff' : C.ink; c.fillRect(300 + i * 30, 1180, 30, 16); c.fillStyle = i % 2 ? C.ink : '#fff'; c.fillRect(300 + i * 30, 1196, 30, 16); } c.restore();
+  const race = (t0, t1, winRose) => {
+    const pr = clamp((t - t0) / (t1 - t0));
+    const yA = lerp(1830, 1200, io(pr) * (winRose ? 1 : .86)), yB = lerp(1830, 1200, io(pr) * (winRose ? .86 : 1));
+    const steps = (x, yHead, col, big) => {
+      const n = Math.floor((1830 - yHead) / 54);
+      for (let i = 0; i <= n; i++) {
+        const y = 1830 - i * 54; const age = (1830 - yHead - i * 54) / 700;
+        c.save(); c.globalAlpha *= clamp(1 - age * .9); c.fillStyle = col; c.translate(x + (i % 2 ? 22 : -22), y); c.scale(big ? 1.2 : 1, big ? 1.2 : 1);
+        c.beginPath(); c.ellipse(0, 0, 11, 19, 0, 0, TAU); c.fill();
+        [-8, -3, 3, 8].forEach((dx, k) => { c.beginPath(); c.arc(dx, -24 - (k === 1 || k === 2 ? 3 : 0), 3.6, 0, TAU); c.fill(); });
+        c.restore();
+      }
+      glow(c, x, yHead, 70, col === C.roseD ? 'rgba(255,120,170,A)' : 'rgba(255,210,120,A)', .7);
+    };
+    steps(400, yA, C.roseD, false); steps(680, yB, C.goldD, true);
+    return pr;
+  };
+  const a1 = blockA(t, 30.4, 33.9, .01, .5), a2 = blockA(t, 33.9, 37.8, .3, .01);
+  c.save(); c.globalAlpha *= a1; const p1 = race(30.9, 32.4, true);
+  if (p1 >= 1) { const s = spring(t - 32.4, .45, 2); c.save(); c.translate(400, 1100); c.scale(s, s); heart(c, 0, 0, 44, C.rose); c.font = `700 40px 'Fredoka',${SANS}`; c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText('1', 0, 14); c.restore(); }
+  lines(['Mereka pernah berlumba lari.'], 540, 560, 70, { t0: 30.8, t, size: 54, font: `italic 600 54px ${SERIF}`, color: C.cream });
+  words('Dia menang.', 540, 690, { t0: 32.3, t, size: 84, font: `italic 600 84px ${SERIF}`, color: roseText, shadow: 'rgba(255,120,170,0.5)' });
+  c.restore();
+  c.save(); c.globalAlpha *= a2; const p2 = race(34.3, 35.7, false);
+  if (p2 >= 1) { const s = spring(t - 35.7, .45, 2); c.save(); c.translate(680, 1100); c.scale(s, s); heart(c, 0, 0, 44, C.gold); c.font = `700 40px 'Fredoka',${SANS}`; c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText('1', 0, 14); c.restore(); }
+  lines(['Bertahun kemudian, Baginda', 'pula menang, lalu bersabda:'], 540, 520, 60, { t0: 34.1, t, size: 46, font: `600 46px ${SANS}`, color: C.cream, stag: .05 });
+  words('“Ini untuk yang dulu.”', 540, 710, { t0: 35.6, t, size: 74, font: `italic 600 74px ${SERIF}`, color: goldText, shadow: 'rgba(255,190,120,0.5)' });
+  pill('Sunan Abi Dawud', 540, 810, 36.1, t);
+  c.restore();
+}
+// 7. Cawan
+function s7(t) {
+  const c = X;
+  label('MANIS', 330, 37.8, t);
+  lines(['Baginda sengaja minum', 'di tempat bibirnya', 'menyentuh cawan.'], 540, 470, 76, { t0: 38.0, t, size: 64, font: `italic 600 64px ${SERIF}`, color: C.cream });
+  const s = spring(t - 38.0, .5, 1.6);
+  cup(c, 540, 1080 + (1 - s) * 200, 1.15 * Math.max(.01, s), t);
+  // tanda bibir
+  const lp = o5(prog(t, 38.8, 39.3)), gp = spring(t - 39.6, .45, 2);
+  const lx = 540 - 72, ly = 1080 - 92 * 1.15;
+  if (lp > 0) { glow(c, lx, ly, 70, 'rgba(255,120,170,A)', .7 * lp); heart(c, lx, ly, 16 * lp, C.roseD); }
+  if (gp > 0) {
+    glow(c, lx, ly, 120 * gp, 'rgba(255,214,140,A)', .5);
+    for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + t; sparkle(c, lx + Math.cos(a) * 70 * gp, ly + Math.sin(a) * 50 * gp, 10 * gp * (1 - prog(t, 40.5, 41.5)), '#fff3d6'); }
+    heart(c, lx, ly - 70 * o5(prog(t, 39.6, 40.6)), 30 * gp, C.rose, 1 - prog(t, 40.8, 41.6));
+  }
+  pill('Sahih Muslim', 540, 1430, 39.8, t);
+}
+// 8. Salam Jibril
+function s8(t) {
+  const c = X;
+  // pancaran cahaya dari langit
+  const bp = o3(prog(t, 41.8, 42.4)), fade = 1 - .5 * prog(t, 43, 45);
+  if (bp > 0) {
+    const g = c.createLinearGradient(0, 0, 0, 1190); g.addColorStop(0, 'rgba(255,240,210,0)'); g.addColorStop(1, `rgba(255,230,180,${.55 * fade})`);
+    c.fillStyle = g; c.beginPath(); c.moveTo(540 - 40, 0); c.lineTo(540 + 40, 0); c.lineTo(540 + 170 * bp, 1190 * bp); c.lineTo(540 - 170 * bp, 1190 * bp); c.fill();
+    const rp = o5(prog(t, 42.2, 43.4));
+    c.save(); c.globalAlpha *= (1 - rp) * .9; c.strokeStyle = '#fff1d6'; c.lineWidth = 6; c.beginPath(); c.arc(540, 1190, 120 + rp * 420, 0, TAU); c.stroke(); c.restore();
+    for (let i = 0; i < 14; i++) { const a = i / 14 * TAU; const r = 160 + 260 * o5(prog(t, 42.2, 43.6)); sparkle(c, 540 + Math.cos(a) * r, 1190 + Math.sin(a) * r * .8, 14 * (1 - prog(t, 43.2, 44.6)), '#fff3dc'); }
+  }
+  words('Rasulullah ﷺ bersabda:', 540, 300, { t0: 41.9, t, size: 38, font: `600 38px ${SANS}`, color: 'rgba(255,236,242,0.85)', stag: .05 });
+  arabic('يَا عَائِشُ', 540, 470, 150, "'Ruqaa'", prog(t, 42.2, 43.1));
+  lines(['“Wahai Aisy, ini Jibril,', 'dia menyampaikan', 'salam kepadamu.”'], 540, 600, 72, { t0: 42.8, t, size: 60, font: `italic 600 60px ${SERIF}`, color: C.cream });
+  pill('Sahih al-Bukhari', 540, 1470, 43.8, t);
+}
+// 9. Ilmu
+function s9(t) {
+  const c = X;
+  label('LAUTAN ILMU', 300, 45.8, t, C.gold);
+  const cv = 2210 * o5(prog(t, 46.0, 48.0));
+  if (t > 45.9) counter(cv, 540, 490, 190, C.gold, t);
+  words('hadis diriwayatkan beliau', 540, 580, { t0: 46.5, t, size: 46, font: `600 46px ${SANS}`, color: C.cream, stag: .05 });
+  // timbunan buku
+  const B = [['#e9578a', C.gold, 420, 92], ['#6c4bb0', '#ffd8e6', 380, 84], ['#2fa57a', C.goldL, 400, 88], ['#f7c873', C.roseD, 350, 80], ['#ff8fb1', '#fff', 320, 76]];
+  let yb = 1330;
+  B.forEach((b, i) => {
+    const s = spring(t - 46.0 - i * .22, .5, 2.0);
+    const y = lerp(yb - 140, yb, Math.min(1.05, s));
+    if (s > 0) { c.save(); c.globalAlpha *= clamp((t - 46.0 - i * .22) * 5); c.translate(540, y); c.rotate((i % 2 ? -1 : 1) * .03); c.scale(lerp(.6, 1, Math.min(1, s)), lerp(.6, 1, Math.min(1, s))); book(c, 0, 0, b[2], b[3], b[0], b[1]); c.restore(); }
+    yb -= b[3] - 6;
+  });
+  lines(['Sahabat-sahabat besar', 'merujuk ilmu kepadanya.'], 540, 1450, 58, { t0: 47.8, t, size: 44, font: `600 44px ${SANS}`, color: C.cream, stag: .05 });
+  pill('adh-Dhahabi · Sunan at-Tirmizi', 540, 1560, 48.4, t);
+}
+// 9b. Kalung & tayammum
+function s9b(t) {
+  const c = X;
+  dune(c, 1440, 50, .004, 1.3, '#e4936e', 0); dune(c, 1540, 40, .003, 2.5, '#f2b182', 0);
+  const a1 = blockA(t, 49.9, 52.0, .01, .45), a2 = blockA(t, 51.8, 54.3, .3, .01);
+  c.save(); c.globalAlpha *= a1;
+  lines(['Kalungnya tercicir', 'dalam satu perjalanan.'], 540, 420, 76, { t0: 50.3, t, size: 64, font: `italic 600 64px ${SERIF}`, color: C.cream });
+  c.restore();
+  // manik-manik
+  const n = 14;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * TAU; const fall = o3(prog(t, 50.9 + i * .03, 51.6 + i * .03));
+    const x0 = 540 + Math.cos(a) * 120, y0 = 860 + Math.sin(a) * 90;
+    const x1 = 300 + i * 36, y1 = 1500 + Math.sin(i * 1.7) * 18;
+    const x = lerp(x0, x1, fall), y = lerp(y0, y1, fall) - Math.sin(Math.PI * fall) * 120;
+    const g = c.createRadialGradient(x - 5, y - 5, 2, x, y, 20); g.addColorStop(0, '#ffe6ee'); g.addColorStop(1, i % 3 ? C.roseD : '#7a3b6a');
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, 17, 0, TAU); c.fill();
+  }
+  if (t < 51.2) { c.strokeStyle = 'rgba(255,214,140,0.7)'; c.lineWidth = 3; c.beginPath(); c.ellipse(540, 860, 120, 90, 0, 0, TAU); c.stroke(); }
+  // debu bercahaya naik
+  const up = prog(t, 52.0, 54.3);
+  for (let i = 0; i < 26; i++) { const tt = (up * 1.3 + i / 26) % 1; if (up <= 0) break; const x = 120 + (i * 137) % 840; sparkle(c, x, 1500 - tt * 700, 12 * Math.sin(tt * Math.PI), '#fff1cf'); }
+  c.save(); c.globalAlpha *= a2;
+  lines(['Lalu turunlah ayat tayammum,', 'rahmat buat seluruh umat.'], 540, 400, 70, { t0: 52.0, t, size: 54, font: `italic 600 54px ${SERIF}`, color: goldText });
+  pill('Sahih al-Bukhari', 540, 1660, 52.7, t);
+  c.restore();
+}
+// 10. Dibela langit
+function s10(t) {
+  const c = X;
+  const part = io(prog(t, 55.9, 57.0));
+  if (part > 0) {
+    c.save(); c.globalAlpha *= part;
+    for (let i = 0; i < 9; i++) { const a = Math.PI / 2 + (i - 4) * .2 + Math.sin(t * .5) * .02; c.fillStyle = 'rgba(255,224,160,0.12)'; c.beginPath(); c.moveTo(540, 120); c.lineTo(540 + Math.cos(a - .05) * 2400, 120 + Math.sin(a - .05) * 2400); c.lineTo(540 + Math.cos(a + .05) * 2400, 120 + Math.sin(a + .05) * 2400); c.fill(); }
+    glow(c, 540, 120, 560, 'rgba(255,230,170,A)', .55); c.restore();
+  }
+  const cl = (x, y, s, d) => cloud(c, x + d * part * 700, y, s, `rgba(${lerp(70, 255, part * .5) | 0},${lerp(62, 230, part * .5) | 0},${lerp(90, 240, part * .5) | 0},0.9)`);
+  const inP = o5(prog(t, 54.0, 54.8));
+  cl(lerp(-200, 260, inP), 1040, 1.3, -1); cl(lerp(1280, 820, inP), 1000, 1.4, 1); cl(lerp(-200, 330, inP), 1290, 1.1, -1); cl(lerp(1280, 760, inP), 1310, 1.2, 1);
+  const a1 = blockA(t, 53.9, 56.1, .01, .4), a2 = blockA(t, 55.9, 58.3, .2, .01);
+  c.save(); c.globalAlpha *= a1; words('Saat namanya difitnah,', 540, 520, { t0: 54.3, t, size: 64, font: `italic 600 64px ${SERIF}`, color: 'rgba(255,236,242,0.9)' }); c.restore();
+  c.save(); c.globalAlpha *= a2;
+  lines(['Allah sendiri', 'membersihkannya.'], 540, 480, 92, { t0: 56.2, t, size: 82, font: `italic 600 82px ${SERIF}`, color: goldText, shadow: 'rgba(255,200,120,0.5)' });
+  arabic('سُورَةُ النُّور', 540, 1640, 96, "'Amiri'", prog(t, 56.6, 57.5));
+  pill('An-Nur 24:11-20', 540, 1720, 57.0, t);
+  c.restore();
+}
+// 11. Dermawan
+function s11(t) {
+  const c = X;
+  label('DERMAWAN', 300, 58.3, t, C.gold);
+  if (t > 58.4) counter(100000 * o5(prog(t, 58.4, 60.0)), 540, 480, 170, C.goldL, t);
+  words('dirham', 540, 570, { t0: 58.8, t, size: 50, font: `italic 600 50px ${SERIF}`, color: C.cream });
+  // bakul
+  const bx = 540, by = 1380;
+  const cp = prog(t, 58.8, 62.3);
+  for (let i = 0; i < 26; i++) {
+    const st = (i * .37) % 1; const tt = (cp * 2.2 - st); if (tt <= 0 || tt > 1) continue;
+    const a = -Math.PI / 2 + Math.sin(i * 2.1) * .7; const d = o3(tt) * (500 + (i % 5) * 70);
+    const x = bx + Math.cos(a) * d, y = by - 40 + Math.sin(a) * d * 1.1 + tt * tt * 160;
+    if (tt > .75) sparkle(c, x, y, 16 * (1 - tt) * 4, '#fff3dc'); else coin(c, x, y, 26, tt * 9 + i);
+  }
+  c.save(); c.translate(bx, by);
+  c.fillStyle = '#b06a3c'; c.beginPath(); c.moveTo(-150, -40); c.lineTo(150, -40); c.lineTo(120, 90); c.quadraticCurveTo(0, 110, -120, 90); c.closePath(); c.fill();
+  c.strokeStyle = '#d68f55'; c.lineWidth = 6; for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(-145 + k * 6, -10 + k * 30); c.quadraticCurveTo(0, k * 30 + 6, 145 - k * 6, -10 + k * 30); c.stroke(); }
+  c.fillStyle = '#d68f55'; c.beginPath(); c.ellipse(0, -40, 152, 26, 0, 0, TAU); c.fill();
+  c.fillStyle = '#7a3f22'; c.beginPath(); c.ellipse(0, -40, 132, 18, 0, 0, TAU); c.fill();
+  c.restore();
+  lines(['Disedekahkan dalam sehari ketika', 'berpuasa, hingga lupa menyimpan', 'sedikit untuk berbuka.'], 540, 690, 56, { t0: 59.3, t, size: 40, font: `600 40px ${SANS}`, color: C.cream, stag: .04 });
+  pill('Ibn Sa‘d, at-Tabaqat', 540, 1580, 60.0, t);
+}
+// 12. Penutup
+function s12(t) {
+  const c = X;
+  masjid(c, t, o5(prog(t, 62.0, 63.4)));
+  crescent(c, 540, lerp(360, 290, o5(prog(t, 62, 64))), 64, o5(prog(t, 62.6, 64)), -.35);
+  const a1 = blockA(t, 61.9, 65.9, .01, .5), a2 = blockA(t, 65.7, 71, .3, .01);
+  c.save(); c.globalAlpha *= a1;
+  arabic('أُمُّ المُؤْمِنِين', 540, 600, 140, "'Ruqaa'", prog(t, 62.5, 63.7));
+  words('Ummul Mukminin', 540, 730, { t0: 63.3, t, size: 92, font: `italic 600 92px ${SERIF}`, color: C.cream, shadow: 'rgba(255,200,140,0.4)' });
+  words('Ibu orang-orang beriman', 540, 810, { t0: 63.8, t, size: 44, font: `600 44px ${SANS}`, color: 'rgba(255,236,242,0.9)', stag: .05 });
+  pill('Al-Ahzab 33:6', 540, 890, 64.3, t);
+  c.restore();
+  c.save(); c.globalAlpha *= a2;
+  arabic('عَائِشَة', 540, 640, 210, "'Ruqaa'", prog(t, 66.0, 67.2));
+  arabic('رَضِيَ اللهُ عَنْهَا', 540, 760, 66, "'Amiri'", prog(t, 66.7, 67.5), { grad: ['#ffffff', '#ffeef4', '#ffd2e0'], glow: 'rgba(255,255,255,0.4)', blur: 14 });
+  words('Al-Humaira', 540, 880, { t0: 67.0, t, size: 84, font: `italic 600 84px ${SERIF}`, color: roseText, shadow: 'rgba(255,120,170,0.55)' });
+  words('Wafat 58 H di Madinah', 540, 950, { t0: 67.4, t, size: 36, font: `600 36px ${SANS}`, color: 'rgba(255,236,242,0.85)', stag: .05 });
+  const fp = o5(prog(t, 68.0, 68.8));
+  c.globalAlpha *= fp; c.textAlign = 'center'; c.fillStyle = 'rgba(255,236,242,0.7)'; c.font = `500 25px ${SANS}`;
+  c.fillText('Rujukan: Al-Quran, Sahih al-Bukhari, Sahih Muslim,', 540, 1010 + (1 - fp) * 10);
+  c.fillText('Sunan Abi Dawud, Sunan at-Tirmizi, adh-Dhahabi, Ibn Sa‘d', 540, 1046 + (1 - fp) * 10);
+  c.fillStyle = 'rgba(255,214,228,0.55)'; c.font = `600 22px 'Fredoka',${SANS}`; c.letterSpacing = '2px';
+  c.fillText('ILUSTRASI SIMBOLIK · TANPA GAMBARAN WAJAH TOKOH', 540, 1096);
+  c.restore();
+}
+
+// ============================================================
+//  SEEK
+// ============================================================
+function envOf(t, a, b) {
+  const fi = .55, fo = .55;
+  const pin = a <= 0 ? 1 : clamp((t - a) / fi), pout = b >= 70 ? 0 : clamp((t - (b - fo)) / fo);
+  return { al: o3(pin) * (1 - io(pout)), pin, pout };
+}
+window.seek = function (t) {
+  t = Math.max(0, Math.min(T - 1e-4, t));
+  M.setTransform(1, 0, 0, 1, 0, 0); M.globalAlpha = 1; M.filter = 'none'; M.globalCompositeOperation = 'source-over';
+  drawSky(t); drawMotes(t);
+  for (const [a, b, fn] of SC) {
+    if (t < a || t > b) continue;
+    const e = envOf(t, a, b); if (e.al <= 0.002) continue;
+    LC.setTransform(1, 0, 0, 1, 0, 0); LC.clearRect(0, 0, W, H); LC.globalAlpha = 1; LC.filter = 'none';
+    X = LC; fn(t); X = M;
+    const s = lerp(.965, 1, o5(e.pin)) * lerp(1, 1.045, io(e.pout));
+    const dy = (1 - o5(e.pin)) * 46 - io(e.pout) * 56;
+    const bl = (1 - o3(e.pin)) * 12 + io(e.pout) * 14;
+    M.save(); M.globalAlpha = e.al; if (bl > .4) M.filter = `blur(${bl.toFixed(1)}px)`;
+    M.translate(540, 960 + dy); M.scale(s, s); M.translate(-540, -960); M.drawImage(L, 0, 0); M.restore();
+  }
+  // pelita
+  const ps = pelitaState(t);
+  if (ps.a > 0.01) {
+    M.save(); M.globalAlpha = ps.a; pelita(M, ps.x, ps.y, ps.s, ps); M.restore();
+  }
+  if (t > 66.8) { const p = prog(t, 66.9, 68.0); const g = o5(prog(t, 67.3, 68.2)); glow(M, 730, 300, 90 * g, 'rgba(255,214,228,A)', .8); sparkle(M, 730, 300, 30 * g * (1 + .15 * Math.sin(t * 5)), '#fff'); }
+  // tekstur
+  M.drawImage(VIG, 0, 0);
+  M.save(); M.globalAlpha = .07; M.globalCompositeOperation = 'overlay'; M.drawImage(GRAIN[Math.floor(t * 30) % 4], 0, 0, W, H); M.restore();
+  // pudar masuk/keluar
+  const fade = prog(t, 69.3, 70);
+  if (fade > 0) { M.fillStyle = `rgba(0,0,0,${fade})`; M.fillRect(0, 0, W, H); }
+  document.getElementById('hud').textContent = t.toFixed(2) + 's';
+};
+
+// pratonton: Space main/jeda, ←/→ bingkai, R ulang
+let playing = false, cur = 0, last = 0;
+function loop(ts) { if (playing) { cur += (ts - last) / 1000; if (cur >= T) cur = 0; seek(cur); } last = ts; requestAnimationFrame(loop); }
+addEventListener('keydown', e => { if (e.code === 'Space') playing = !playing; if (e.code === 'ArrowRight') { cur += 1 / 30; seek(cur); } if (e.code === 'ArrowLeft') { cur -= 1 / 30; seek(cur); } if (e.code === 'KeyR') { cur = 0; seek(0); } });
+(async () => {
+  const fams = [`italic 600 40px Fraunces`, `600 40px Fraunces`, `500 40px Jakarta`, `600 40px Jakarta`, `700 40px Jakarta`, `800 40px Jakarta`, `400 40px Amiri`, `700 40px Amiri`, `700 40px Ruqaa`, `600 40px Fredoka`];
+  await Promise.all(fams.map(f => document.fonts.load(f, 'abc عائشة ﷺ')));
+  await document.fonts.ready;
+  if (!navigator.webdriver) { const q = new URLSearchParams(location.search).get('t'); cur = q ? +q : 0; seek(cur); requestAnimationFrame(loop); }
+  window.ready = true;
+})();
+</script>
+</body>
+</html>
