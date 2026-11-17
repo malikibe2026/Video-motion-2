@@ -4,6 +4,7 @@ const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 const fs = require('fs'), path = require('path');
 const [, , mode, out, a, b] = process.argv;
+const OMIT = (process.env.PAGE || '').includes('layer=front');
 const FPS = 30, URL = "http://127.0.0.1:8777/" + (process.env.PAGE || "humaira.html");
 (async () => {
   const browser = await chromium.launch({ args: ['--font-render-hinting=none', '--force-color-profile=srgb', '--disable-gpu-vsync'] });
@@ -11,19 +12,20 @@ const FPS = 30, URL = "http://127.0.0.1:8777/" + (process.env.PAGE || "humaira.h
   page.on('pageerror', e => console.log('PAGEERROR', e.message));
   page.on('console', m => { if (m.type() === 'error') console.log('CONSOLE', m.text()); });
   await page.goto(URL); await page.waitForFunction(() => window.ready === true);
+  
   const grab = async t => {
-    const d = await page.evaluate(t => { seek(t); return document.getElementById('c').toDataURL('image/jpeg', 0.95); }, t);
+    const d = await page.evaluate(([t, o]) => { seek(t); return document.getElementById('c').toDataURL(o ? "image/png" : "image/jpeg", 0.95); }, [t, OMIT]);
     return Buffer.from(d.split(',')[1], 'base64');
   };
   if (mode === 'probe') {
     const ts = a.split(',').map(Number); const dir = out + '_f'; fs.mkdirSync(dir, { recursive: true });
-    for (let i = 0; i < ts.length; i++) fs.writeFileSync(path.join(dir, String(i).padStart(3, '0') + '.jpg'), await grab(ts[i]));
+    for (let i = 0; i < ts.length; i++) fs.writeFileSync(path.join(dir, String(i).padStart(3, '0') + (OMIT ? '.png' : '.jpg')), await grab(ts[i]));
     const cols = Math.min(ts.length, 5);
-    const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(dir, '%03d.jpg'), '-vf', `scale=360:-1,tile=${cols}x${Math.ceil(ts.length / cols)}:padding=6:color=white`, '-frames:v', '1', out]);
+    const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(dir, OMIT ? '%03d.png' : '%03d.jpg'), '-vf', `scale=360:-1,tile=${cols}x${Math.ceil(ts.length / cols)}:padding=6:color=white`, '-frames:v', '1', out]);
     await new Promise(r => ff.on('close', r));
   } else {
     const f0 = +a, f1 = +b;
-    const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
+    const ff = OMIT ? spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-', '-c:v', 'png', '-pix_fmt', 'rgba', out], { stdio: ['pipe', 'inherit', 'inherit'] }) : spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
       '-vf', 'scale=in_range=pc:out_range=tv:out_color_matrix=bt709,format=yuv420p', '-c:v', 'libx264', '-preset', 'medium', '-crf', '16',
       '-color_range', 'tv', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', out], { stdio: ['pipe', 'inherit', 'inherit'] });
     const t0 = Date.now();
