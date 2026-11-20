@@ -1,0 +1,5 @@
+node_modules/
+contoh/hyperframes-3d/vendor/
+**/out.mp4
+**/*.srt
+**/*.words.json

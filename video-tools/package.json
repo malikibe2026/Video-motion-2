@@ -1,0 +1,23 @@
+{
+  "name": "video-tools",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "FFmpeg, Whisper, HyperFrames, Remotion dan Three.js untuk menghasilkan video dengan kod.",
+  "scripts": {
+    "hf": "hyperframes",
+    "ujian:hyperframes": "cd contoh/hyperframes-3d && hyperframes render -o out.mp4",
+    "ujian:remotion": "node contoh/remotion/render.mjs"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.522",
+    "@remotion/cli": "4.0.522",
+    "@remotion/renderer": "4.0.522",
+    "gsap": "3.14.2",
+    "hyperframes": "0.8.33",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.522",
+    "three": "0.187.0"
+  }
+}

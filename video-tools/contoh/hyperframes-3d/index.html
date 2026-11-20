@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ms" data-resolution="landscape">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<script src="./vendor/gsap.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#0b1020}
+#c{position:absolute;inset:0;width:1920px;height:1080px}
+#title{position:absolute;left:0;right:0;bottom:140px;text-align:center;color:#fff;font:700 84px sans-serif}
+</style>
+</head>
+<body>
+<!-- Contoh: kiub 3D (Three.js) + tajuk beranimasi (GSAP), dirender oleh HyperFrames. -->
+<div id="root" data-composition-id="main" data-start="0" data-duration="4" data-width="1920" data-height="1080">
+  <canvas id="c" width="1920" height="1080"></canvas>
+  <div id="title" class="clip" data-start="0" data-duration="4" data-track-index="1">Ujian Three.js</div>
+</div>
+<script>
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+tl.fromTo("#title", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 1 }, 0.3);
+window.__timelines["main"] = tl;
+</script>
+<script type="module">
+import * as THREE from "./vendor/three.module.js";
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("c"), antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(1920, 1080, false);
+renderer.setClearColor(0x0b1020);
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(40, 1920 / 1080, 0.1, 100);
+cam.position.set(0, 0.6, 6);
+scene.add(new THREE.AmbientLight(0x8899ff, 0.5));
+const key = new THREE.DirectionalLight(0xffe0b0, 2.2); key.position.set(3, 4, 5); scene.add(key);
+const cube = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.6, 1.6),
+  new THREE.MeshStandardMaterial({ color: 0x2f7cf6, roughness: 0.5, metalness: 0.2 }));
+cube.position.y = 0.5; scene.add(cube);
+// Setiap bingkai dikira daripada masa t sahaja (wajib untuk HyperFrames).
+function renderAt(t) { cube.rotation.set(0.4 + t * 0.5, t * 1.2, 0); renderer.render(scene, cam); }
+window.addEventListener("hf-seek", e => renderAt(e.detail.time));
+renderAt(0);
+</script>
+</body>
+</html>
