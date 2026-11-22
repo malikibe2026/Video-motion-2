@@ -1,0 +1,199 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Russo;src:url(fonts/russo-one-latin-400-normal.woff2)}
+@font-face{font-family:Jak;font-weight:500;src:url(fonts/plus-jakarta-sans-latin-500-normal.woff2)}
+@font-face{font-family:Jak;font-weight:700;src:url(fonts/plus-jakarta-sans-latin-700-normal.woff2)}
+@font-face{font-family:Jak;font-weight:800;src:url(fonts/plus-jakarta-sans-latin-800-normal.woff2)}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transparent}
+#stage{position:absolute;inset:0;overflow:hidden}
+.abs{position:absolute}
+.mask{overflow:hidden;display:inline-block;vertical-align:top}
+.mask>span{display:inline-block;will-change:transform}
+.title{font-family:Russo;color:#fff;letter-spacing:.02em;white-space:nowrap}
+.kick{font-family:Jak;font-weight:700;letter-spacing:.42em;color:#fff;text-transform:uppercase;white-space:nowrap}
+.grad{background:linear-gradient(100deg,#fff 0%,#fff 38%,#ffe9a8 46%,#fff 54%,#fff 100%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{position:absolute;transform-origin:50% 100%;display:flex;flex-direction:column;align-items:center}
+.pill{display:flex;align-items:center;gap:14px;padding:12px 26px 12px 16px;border-radius:999px;background:rgba(10,12,20,.55);border:1.5px solid rgba(255,255,255,.28);backdrop-filter:blur(10px);box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.dot{width:16px;height:16px;border-radius:50%}
+.pname{font-family:Jak;font-weight:800;font-size:40px;color:#fff;letter-spacing:.06em}
+.line{width:2px;background:linear-gradient(to top,rgba(255,255,255,.9),rgba(255,255,255,0))}
+.hero{position:absolute;display:flex;flex-direction:column;align-items:center;transform-origin:50% 50%}
+.hname{font-family:Russo;font-size:84px;color:#fff;letter-spacing:.04em;line-height:1;white-space:nowrap}
+.hbar{height:6px;border-radius:3px;margin-top:12px}
+.hsub{font-family:Jak;font-weight:700;font-size:20px;letter-spacing:.5em;color:rgba(255,255,255,.85);margin-top:12px;padding-left:.5em}
+.badge{display:flex;align-items:center;gap:16px}
+.bnum{font-family:Russo;font-size:30px;color:#0b0b10;background:#fff;border-radius:8px;padding:4px 12px}
+.btxt{font-family:Jak;font-weight:800;font-size:26px;letter-spacing:.32em;color:#fff}
+</style></head>
+<body><div id="stage">
+  <!-- intro streaks -->
+  <canvas id="fx" class="abs" width="1920" height="1080" style="left:0;top:0;z-index:5"></canvas>
+  <!-- intro / outro title -->
+  <div id="tblock" class="abs" style="left:0;top:0;width:1920px;height:1080px;z-index:20">
+    <div id="tkick" class="abs kick" style="left:0;width:1920px;top:356px;text-align:center;font-size:28px"></div>
+    <div id="ttitle" class="abs title" style="left:0;width:1920px;top:410px;text-align:center;font-size:200px;line-height:1"></div>
+    <div id="tsub" class="abs kick" style="left:0;width:1920px;top:660px;text-align:center;font-size:30px;letter-spacing:.5em"></div>
+    <div id="trule" class="abs" style="top:636px;height:3px;left:960px;width:0;background:linear-gradient(90deg,#2f7bff,#ff2e88,#ffc93c,#59e07a)"></div>
+  </div>
+  <!-- chapter slam -->
+  <div id="chap" class="abs" style="left:0;top:0;width:1920px;height:1080px;z-index:30"></div>
+  <!-- chapter badge -->
+  <div id="badge" class="abs badge" style="left:72px;top:64px;z-index:25"><div class="bnum" id="bnum">01</div><div class="btxt" id="btxt">PERTUKARAN</div></div>
+  <div id="tags" class="abs" style="left:0;top:0;width:1920px;height:1080px;z-index:22"></div>
+  <div id="heroes" class="abs" style="left:0;top:0;width:1920px;height:1080px;z-index:22"></div>
+</div>
+<script src="names.js" onerror=""></script>
+<script>
+// Nama dibaca daripada src/names.js (tempatan, tidak di-commit). Contoh isi:
+// window.NAMES=['NAMA1','NAMA2','NAMA3'];
+const [N1,N2,N3]=(window.NAMES||['NAMA 1','NAMA 2','NAMA 3']).map(x=>x.toUpperCase());
+// ---------- helpers ----------
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const io=t=>{t=clamp(t);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2};
+const out=t=>{t=clamp(t);return 1-Math.pow(1-t,3)};
+const o5=t=>{t=clamp(t);return 1-Math.pow(1-t,5)};
+const inn=t=>{t=clamp(t);return t*t*t};
+const expo=t=>{t=clamp(t);return t>=1?1:1-Math.pow(2,-10*t)};
+// spring step response (closed form), damping ratio z<1
+function step(t,f=2.2,z=.62){ if(t<=0) return 0; const w=2*Math.PI*f, wd=w*Math.sqrt(1-z*z);
+  return 1-Math.exp(-z*w*t)*(Math.cos(wd*t)+z*w/wd*Math.sin(wd*t)); }
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+// ---------- timeline (must match compose.py) ----------
+const T={ introEnd:3.0, ch1:3.0, play1:5.5, hero1:12.9, ch2:17.9, hero2:25.3, outro:30.3, end:33.8 };
+const KIDS1=[{n:N1,x:552,c:'#2f7bff'},{n:N2,x:960,c:'#ff2e88'},{n:N3,x:1332,c:'#ffc93c'}];
+const HER1=[{n:N1,x:444,c:'#2f7bff',s:'WIRA BIRU'},{n:N2,x:900,c:'#ff2e88',s:'WIRA MAGENTA'},{n:N3,x:1476,c:'#ffc93c',s:'WIRA EMAS'}];
+const HER2=[{n:N1,x:432,c:'#ff4d4d',s:'WIRA CAHAYA'},{n:N2,x:912,c:'#ff6fb5',s:'WIRA MERAH JAMBU'},{n:N3,x:1416,c:'#59e07a',s:'WIRA HIJAU'}];
+
+// ---------- build DOM ----------
+function letters(el,text,cls=''){el.innerHTML='';const spans=[];for(const ch of text){const m=document.createElement('span');m.className='mask';const s=document.createElement('span');s.textContent=ch===' '?' ':ch;if(cls)s.className=cls;m.appendChild(s);el.appendChild(m);spans.push(s)}return spans}
+const tkick=document.getElementById('tkick'), ttitle=document.getElementById('ttitle'), tsub=document.getElementById('tsub'), trule=document.getElementById('trule'), tblock=document.getElementById('tblock');
+const titleSpans=letters(ttitle,'WIRA CILIK','grad');
+tkick.textContent=`${N1}  ·  ${N2}  ·  ${N3}`;
+tsub.textContent='DUA PERTUKARAN';
+
+const tagsEl=document.getElementById('tags');
+const tagNodes=KIDS1.map(k=>{const d=document.createElement('div');d.className='tag';
+  d.innerHTML=`<div class="pill"><div class="dot" style="background:${k.c};box-shadow:0 0 18px ${k.c}"></div><div class="pname">${k.n}</div></div><div class="line" style="height:0"></div>`;
+  tagsEl.appendChild(d);return d});
+
+const heroesEl=document.getElementById('heroes');
+function mkHeroes(list){return list.map(h=>{const d=document.createElement('div');d.className='hero';
+  d.innerHTML=`<div class="mask"><span class="hname" style="text-shadow:0 0 30px ${h.c}aa,0 6px 30px rgba(0,0,0,.6)">${h.n}</span></div><div class="hbar" style="background:${h.c};box-shadow:0 0 20px ${h.c}"></div><div class="mask"><span class="hsub">${h.s}</span></div>`;
+  heroesEl.appendChild(d);return {d,h}})}
+const H1=mkHeroes(HER1), H2=mkHeroes(HER2);
+
+const chap=document.getElementById('chap');
+chap.innerHTML=`<div id="cband" class="abs" style="left:-200px;width:2320px;top:430px;height:220px;background:linear-gradient(90deg,rgba(8,10,18,0),rgba(8,10,18,.72) 20%,rgba(8,10,18,.72) 80%,rgba(8,10,18,0))"></div>
+<div id="cline1" class="abs" style="top:430px;height:3px;left:0;width:1920px"></div><div id="cline2" class="abs" style="top:647px;height:3px;left:0;width:1920px"></div>
+<div id="ctxt" class="abs" style="left:0;width:1920px;top:458px;text-align:center"><div class="kick" id="ckick" style="font-size:26px"></div><div class="title" id="cbig" style="font-size:120px;line-height:1.1"></div></div>`;
+const cband=document.getElementById('cband'),cl1=document.getElementById('cline1'),cl2=document.getElementById('cline2'),ckick=document.getElementById('ckick'),cbig=document.getElementById('cbig');
+const badge=document.getElementById('badge'),bnum=document.getElementById('bnum');
+
+const fx=document.getElementById('fx'), g=fx.getContext('2d');
+// seeded sparks
+const R=mulberry32(7); const SP=[...Array(90)].map(()=>({x:R()*1920,y:R()*1080,r:.6+R()*2.2,s:.2+R()*.9,ph:R()*6.28,c:['#9cc4ff','#ffb3d6','#ffe28a','#a8f0b8'][Math.floor(R()*4)]}));
+
+// ---------- seek ----------
+function drawFX(t){
+  g.clearRect(0,0,1920,1080);
+  // floating sparks in intro and outro
+  const inIntro = t<T.introEnd+.3, inOut = t>T.outro-.2;
+  if(!(inIntro||inOut)) return;
+  const a = inIntro ? clamp(t/.6)*(1-clamp((t-T.introEnd+.2)/.4)) : clamp((t-T.outro)/.8)*(1-clamp((t-(T.end-.5))/.5));
+  const base = inIntro? t : t-T.outro;
+  g.globalCompositeOperation='lighter';
+  for(const p of SP){ const y=((p.y - base*60*p.s)%1080+1080)%1080; const tw=.5+.5*Math.sin(base*3*p.s+p.ph);
+    g.globalAlpha=a*tw*.85; g.fillStyle=p.c; g.beginPath(); g.arc(p.x+Math.sin(base*.8+p.ph)*14,y,p.r,0,6.283); g.fill();
+    g.globalAlpha=a*tw*.18; g.beginPath(); g.arc(p.x+Math.sin(base*.8+p.ph)*14,y,p.r*5,0,6.283); g.fill(); }
+  // light sweep streaks behind title
+  const st = inIntro? clamp((t-.3)/1.4) : clamp((t-T.outro-.2)/1.4);
+  const cols=['#2f7bff','#ff2e88','#ffc93c','#59e07a'];
+  cols.forEach((c,i)=>{ const p=o5(clamp(st*1.2-i*.07)); const y=540+(i-1.5)*14; const x0=lerp(-400,960-700,p), x1=lerp(-100,960+700,p);
+    const gr=g.createLinearGradient(x0,0,x1,0); gr.addColorStop(0,c+'00'); gr.addColorStop(.5,c); gr.addColorStop(1,c+'00');
+    g.globalAlpha=a*.35*(1-clamp((st-.8)/.2)*.5); g.fillStyle=gr; g.fillRect(x0,y-1.5,x1-x0,3); });
+  g.globalAlpha=1; g.globalCompositeOperation='source-over';
+}
+
+function titleAt(t, t0, exitAt){
+  // t0 = start; exitAt = time exit begins (or Infinity)
+  const k=t-t0;
+  tblock.style.visibility = (k>=0 && t<exitAt+.5)?'inherit':'hidden';
+  if(k<0) return;
+  const ex = clamp((t-exitAt)/.45), e=inn(ex);
+  tblock.style.opacity = 1-e;
+  tblock.style.transform = `scale(${1+e*.35})`;
+  tblock.style.filter = e>0?`blur(${e*14}px)`:'none';
+  tkick.style.opacity = out((k-.15)/.6); tkick.style.letterSpacing=(0.7-0.28*o5((k-.15)/1.2))+'em';
+  titleSpans.forEach((s,i)=>{ const p=step(k-.35-i*.045,1.6,.7); s.style.transform=`translateY(${(1-p)*110}%) rotate(${(1-p)*8}deg)`; });
+  ttitle.querySelectorAll('.grad').forEach(s=>s.style.backgroundPosition=`${100-clamp((k-.9)/1.4)*100}% 0`);
+  const r=o5((k-.9)/.8); trule.style.left=(960-r*330)+'px'; trule.style.width=(r*660)+'px'; trule.style.top='636px';
+  tsub.style.opacity=out((k-1.1)/.6); tsub.style.transform=`translateY(${(1-out((k-1.1)/.6))*16}px)`;
+}
+
+function chapterAt(t, t0, num, word){
+  const k=t-t0, vis = k>=-.05 && k<1.3;
+  chap.style.visibility=vis?'inherit':'hidden'; if(!vis) return;
+  ckick.textContent='BABAK '+num; if(cbig.dataset.w!==word){cbig.dataset.w=word; cbig.innerHTML=''; letters(cbig,word);}
+  const inP=o5(k/.35), exP=inn((k-.9)/.38);
+  cband.style.transform=`scaleY(${inP*(1-exP)})`; cband.style.opacity=1;
+  const lw=o5(k/.5); cl1.style.background=cl2.style.background=`linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent)`;
+  cl1.style.transform=`translateY(${(1-inP)*110+exP*110}px) scaleX(${lw})`; cl2.style.transform=`translateY(${-(1-inP)*110-exP*110}px) scaleX(${lw})`;
+  cl1.style.opacity=cl2.style.opacity=1-exP;
+  ckick.style.opacity=out((k-.1)/.3)*(1-exP); ckick.style.letterSpacing=(.6-.2*o5((k-.1)/.8))+'em';
+  [...cbig.querySelectorAll('.mask>span')].forEach((s,i)=>{const p=step(k-.08-i*.022,2.2,.72); s.style.transform=`translateY(${(1-p)*105 - exP*105}%)`;});
+  document.getElementById('ctxt').style.transform=`scale(${1.06-.06*o5(k/1.0)})`;
+}
+
+function badgeAt(t){
+  let num=null,k=0,end=0;
+  if(t>=T.ch1+1.2 && t<T.ch2){num='01';k=t-(T.ch1+1.2);end=T.ch2}
+  else if(t>=T.ch2+1.2 && t<T.outro){num='02';k=t-(T.ch2+1.2);end=T.outro}
+  if(!num){badge.style.visibility='hidden';return}
+  badge.style.visibility='inherit'; bnum.textContent=num;
+  const p=step(k,1.8,.75), ex=inn((t-(end-.35))/.35);
+  badge.style.opacity=clamp(k/.25)*(1-ex); badge.style.transform=`translateX(${(1-p)*-40 - ex*30}px)`;
+}
+
+function tagsAt(t){
+  const t0=T.ch1+1.15, exitAt=T.play1-.05;
+  tagNodes.forEach((d,i)=>{
+    const k=t-t0-i*.18, vis=k>0 && t<exitAt+.6;
+    d.style.visibility=vis?'inherit':'hidden'; if(!vis) return;
+    const p=step(k,2.0,.68), ex=inn((t-exitAt-i*.06)/.35);
+    const w=d.offsetWidth; d.style.left=(KIDS1[i].x-w/2)+'px'; d.style.top='862px';
+    d.style.transform=`translateY(${(1-p)*40+ex*30}px) scale(${.9+.1*p})`; d.style.opacity=clamp(k/.2)*(1-ex);
+    d.querySelector('.line').style.height=(o5((k-.15)/.6)*70*(1-ex))+'px';
+    d.querySelector('.line').style.order='-1';
+  });
+}
+
+function heroesAt(t, list, t0, dur){
+  list.forEach(({d,h},i)=>{
+    const k=t-t0-i*.28, vis=k>0 && t<t0+dur+.8;
+    d.style.visibility=vis?'inherit':'hidden'; if(!vis) return;
+    const exitAt=t0+dur+i*.08, ex=inn((t-exitAt)/.4);
+    const w=d.offsetWidth; d.style.left=(h.x-w/2)+'px'; d.style.top='850px';
+    const p=step(k,1.9,.7);
+    d.querySelector('.hname').style.transform=`translateY(${(1-p)*105 + ex*105}%)`;
+    d.querySelector('.hbar').style.width=(o5((k-.12)/.5)*(1-ex)*180)+'px';
+    d.querySelector('.hsub').style.transform=`translateY(${(1-step(k-.25,1.9,.75))*110 + ex*110}%)`;
+    d.style.opacity=1-ex*.2;
+  });
+}
+
+window.seek = async (t)=>{
+  drawFX(t);
+  if(t<T.ch1+.6) titleAt(t,0,T.introEnd-.45);
+  else if(t>=T.outro) { titleAt(t,T.outro+.25,Infinity); tsub.textContent=`${N1}  ·  ${N2}  ·  ${N3}`; tkick.textContent='TERIMA KASIH KERANA MENONTON'; }
+  else tblock.style.visibility='hidden';
+  if(t<T.outro){ tkick.textContent=`${N1}  ·  ${N2}  ·  ${N3}`; tsub.textContent='DUA PERTUKARAN'; }
+  chapterAt(t,T.ch1,'1','PERTUKARAN PERTAMA');
+  if(t>=T.ch2-.1) chapterAt(t,T.ch2,'2','PERTUKARAN KEDUA');
+  badgeAt(t); tagsAt(t);
+  heroesAt(t,H1,T.hero1,2.9); heroesAt(t,H2,T.hero2,2.9);
+};
+document.fonts.ready.then(()=>{window.seek(0);window.ready=true});
+</script></body></html>

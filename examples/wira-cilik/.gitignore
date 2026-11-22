@@ -1,0 +1,6 @@
+work/
+src/node_modules
+# Video dan poster memaparkan wajah kanak-kanak: jangan masukkan ke repo awam
+*.mp4
+*.jpg
+src/names.js
