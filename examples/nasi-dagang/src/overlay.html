@@ -1,0 +1,90 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Play;font-weight:700;src:url(fonts/playfair-display-latin-700-normal.woff2)}
+@font-face{font-family:Play;font-weight:600;font-style:italic;src:url(fonts/playfair-display-latin-600-italic.woff2)}
+@font-face{font-family:Jak;font-weight:500;src:url(fonts/plus-jakarta-sans-latin-500-normal.woff2)}
+@font-face{font-family:Jak;font-weight:700;src:url(fonts/plus-jakarta-sans-latin-700-normal.woff2)}
+@font-face{font-family:Jak;font-weight:800;src:url(fonts/plus-jakarta-sans-latin-800-normal.woff2)}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transparent}
+.abs{position:absolute}
+.c{left:0;width:1920px;text-align:center}
+.kick{font-family:Jak;font-weight:700;letter-spacing:.42em;color:#f3e3c3;font-size:24px;padding-left:.42em}
+.big{font-family:Play;font-weight:700;color:#fff;font-size:132px;line-height:1.05;letter-spacing:.005em}
+.ital{font-family:Play;font-style:italic;font-weight:600;color:#f6d9a6}
+.mask{display:inline-block;overflow:hidden;vertical-align:top;padding:0 .02em .08em}
+.mask>span{display:inline-block}
+.rule{height:2px;background:linear-gradient(90deg,transparent,#e8b866,transparent)}
+#sub{bottom:74px;display:flex;justify-content:center}
+#subbox{font-family:Jak;font-weight:700;font-size:46px;line-height:1.3;color:#fff;background:rgba(12,9,6,.62);padding:12px 30px 14px;border-radius:14px;max-width:1500px;text-align:center;text-shadow:0 2px 6px rgba(0,0,0,.5)}
+#subbox i{font-style:normal;color:#f2cf8c;font-weight:500}
+#chap{left:84px;top:70px;display:flex;align-items:center;gap:18px;padding:14px 26px 14px 20px;border-radius:12px;background:rgba(12,9,6,.42);text-shadow:0 1px 4px rgba(0,0,0,.6)}
+#chap .n{font-family:Play;font-weight:700;font-size:44px;color:#f6d9a6}
+#chap .bar{width:2px;height:48px;background:rgba(255,255,255,.55)}
+#chap .t{font-family:Jak;font-weight:800;font-size:22px;letter-spacing:.32em;color:#fff}
+#chap .s{font-family:Jak;font-weight:500;font-size:20px;color:rgba(255,255,255,.8);margin-top:4px;letter-spacing:.04em}
+</style></head><body>
+<div id="title" class="abs" style="inset:0">
+  <div id="tk" class="abs c kick" style="top:372px">SEBUAH KISAH KELUARGA</div>
+  <div id="tt" class="abs c big" style="top:420px"></div>
+  <div id="tr" class="abs rule" style="top:600px;left:660px;width:600px"></div>
+  <div id="ts" class="abs c ital" style="top:622px;font-size:40px">dari dapur Tok Ma</div>
+</div>
+<div id="inter" class="abs" style="inset:0">
+  <div id="ik" class="abs c ital" style="top:404px;font-size:46px">Tak lama kemudian...</div>
+  <div id="it" class="abs c big" style="top:470px;font-size:110px"></div>
+  <div id="ir" class="abs rule" style="top:620px;left:710px;width:500px"></div>
+</div>
+<div id="end" class="abs" style="inset:0">
+  <div id="et" class="abs c big" style="top:380px"></div>
+  <div id="er" class="abs rule" style="top:548px;left:690px;width:540px"></div>
+  <div id="es" class="abs c ital" style="top:572px;font-size:44px">Air tangan Tok Ma, tiada tandingannya.</div>
+</div>
+<div id="chap" class="abs"><div class="n" id="cn">01</div><div class="bar"></div><div><div class="t" id="ct"></div><div class="s" id="cs"></div></div></div>
+<div id="sub" class="abs c"><div id="subbox"></div></div>
+<script src="subs.js"></script>
+<script>
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const o5=t=>1-Math.pow(1-clamp(t),5), inn=t=>Math.pow(clamp(t),3), io=t=>{t=clamp(t);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2};
+function step(t,f=1.6,z=.75){if(t<=0)return 0;const w=2*Math.PI*f,wd=w*Math.sqrt(1-z*z);return 1-Math.exp(-z*w*t)*(Math.cos(wd*t)+z*w/wd*Math.sin(wd*t))}
+function words(el,text){el.innerHTML='';return text.split(' ').map((w,i,a)=>{const m=document.createElement('span');m.className='mask';const s=document.createElement('span');s.textContent=w;m.appendChild(s);el.appendChild(m);if(i<a.length-1)el.appendChild(document.createTextNode(' '));return s})}
+// garis masa (mesti sama dengan compose.py)
+const T={B0:3.2, INT:13.2, M0:15.0, END:25.0, FIN:28.8};
+// sari kata: [mula, tamat, teks] dalam masa klip (saat), ditambah offset klip
+const SUBS=(window.SUBS_RAW||[]).map(([c,a,b,s])=>{const o=c==='B'?T.B0:T.M0;return [a+o,b+o,s]});
+window.SUBS=SUBS;
+const tt=words(document.getElementById('tt'),'Nasi Dagang Tok Ma');
+const it=words(document.getElementById('it'),'Hidangan Tok Ma');
+const et=words(document.getElementById('et'),'Tamat');
+const $=id=>document.getElementById(id);
+function block(t,t0,exitAt,spans,parts){
+  const k=t-t0, root=parts.root; const vis=k>=0&&t<exitAt+.6; root.style.visibility=vis?'inherit':'hidden'; if(!vis)return;
+  const ex=io((t-exitAt)/.55); root.style.opacity=1-ex; root.style.transform=`translateY(${-ex*14}px)`;
+  if(parts.kick){parts.kick.style.opacity=o5((k-.1)/.8); parts.kick.style.transform=`translateY(${(1-o5((k-.1)/.8))*12}px)`}
+  spans.forEach((s,i)=>{const p=step(k-.3-i*.09,1.3,.8); s.style.transform=`translateY(${(1-p)*108}%)`});
+  if(parts.rule){const r=o5((k-.75)/1.0); parts.rule.style.transform=`scaleX(${r})`; parts.rule.style.opacity=r}
+  if(parts.sub){const p=o5((k-1.0)/.9); parts.sub.style.opacity=p; parts.sub.style.transform=`translateY(${(1-p)*12}px)`}
+}
+function chap(t){
+  const c=$('chap'); let t0=null,n,ti,su;
+  if(t>=T.B0+.6&&t<T.B0+4.4){t0=T.B0+.6;n='01';ti='KHABAR GEMBIRA';su='Cucu-cucu dapat khabar Tok Ma nak masak'}
+  else if(t>=T.M0+.6&&t<T.M0+4.4){t0=T.M0+.6;n='02';ti='HIDANGAN TOK MA';su='Nasi dagang, kuah banjir'}
+  if(t0===null){c.style.visibility='hidden';return}
+  c.style.visibility='inherit'; $('cn').textContent=n; $('ct').textContent=ti; $('cs').textContent=su;
+  const k=t-t0, p=step(k,1.4,.85), ex=io((k-3.25)/.55);
+  c.style.opacity=clamp(k/.35)*(1-ex); c.style.transform=`translateX(${(1-p)*-30-ex*20}px)`;
+}
+function subs(t){
+  const box=$('subbox'), s=SUBS.find(([a,b])=>t>=a-.001&&t<b);
+  if(!s){$('sub').style.visibility='hidden';return}
+  $('sub').style.visibility='inherit'; if(box.dataset.s!==s[2]){box.dataset.s=s[2];box.innerHTML=s[2]}
+  const a=clamp((t-s[0])/.12)*clamp((s[1]-t)/.12); box.style.opacity=a; box.style.transform=`translateY(${(1-clamp((t-s[0])/.18))*8}px)`;
+}
+window.seek=async t=>{
+  block(t,.35,T.B0-.55,tt,{root:$('title'),kick:$('tk'),rule:$('tr'),sub:$('ts')});
+  block(t,T.INT+.25,T.M0-.45,it,{root:$('inter'),kick:$('ik'),rule:$('ir')});
+  block(t,T.END+.5,99,et,{root:$('end'),rule:$('er'),sub:$('es')});
+  chap(t); subs(t);
+};
+document.fonts.ready.then(()=>{window.seek(0);window.ready=true});
+</script></body></html>
