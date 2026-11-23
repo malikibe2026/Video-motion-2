@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>Humaira & Aimi</title>
+<style>
+  @font-face { font-family: 'Fredoka'; src: url('assets/fredoka-latin-700-normal.woff2'); font-weight: 700; }
+  @font-face { font-family: 'Fredoka'; src: url('assets/fredoka-latin-600-normal.woff2'); font-weight: 600; }
+  @font-face { font-family: 'Poppins'; src: url('assets/poppins-latin-600-normal.woff2'); font-weight: 600; }
+  @font-face { font-family: 'Poppins'; src: url('assets/poppins-latin-800-normal.woff2'); font-weight: 800; }
+  html, body { margin: 0; background: #000; }
+  #stage { display: block; width: 1080px; height: 1920px; }
+</style>
+</head>
+<body>
+<canvas id="stage" width="1080" height="1920"></canvas>
+<script>
+const W = 1080, H = 1920, FPS = 30, NFR = 1089, T = 36.3;
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const io = k => { k = clamp(k); return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
+const out = k => { k = clamp(k); return 1 - Math.pow(1 - k, 3); };
+function spring(t, tau, f = 1.2, z = 0.78) {
+  const x = t - tau; if (x <= 0) return 0;
+  const w = 2 * Math.PI * f, wd = w * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w * x) * (Math.cos(wd * x) + (z * w / wd) * Math.sin(wd * x));
+}
+</script>
+<script src="dialog.js"></script>
+<script>
+const STYLE = new URLSearchParams(location.search).get('s') || 'komik';
+const ctx = document.getElementById('stage').getContext('2d');
+const cache = new Map();
+function frameImg(i) {
+  if (cache.has(i)) return cache.get(i);
+  const img = new Image(); img.src = `frames_src/f_${String(i).padStart(5, '0')}.jpg`;
+  const p = img.decode().then(() => img);
+  cache.set(i, p); if (cache.size > 12) cache.delete(cache.keys().next().value);
+  return p;
+}
+const lineAt = t => LINES.find(l => t >= l[0] && t < l[1]);
+
+// ---------- camera punch-ins (komik + tiktok) ----------
+const PUNCH = [
+  { a: 4.3, b: 6.05, who: 'H', z: 1.42, kind: 'punch' },
+  { a: 13.1, b: 15.4, who: 'H', z: 1.75, kind: 'drama' },
+  { a: 21.55, b: 23.4, who: 'A', z: 1.38, kind: 'punch' },
+  { a: 34.9, b: 36.3, who: 'H', z: 1.3, kind: 'drama' },
+];
+function camera(t) {
+  if (STYLE === 'drama') return { z: 1, cx: W / 2, cy: H / 2, p: null };
+  for (const p of PUNCH) {
+    if (t < p.a || t > p.b + 0.4) continue;
+    const kin = p.kind === 'punch' ? clamp(spring(t, p.a, 2.6, 0.72), 0, 1.08) : io(seg(t, p.a, p.b));
+    const kout = 1 - io(seg(t, p.b, p.b + 0.35));
+    const k = kin * kout;
+    const z = lerp(1, p.z, k), hp = headPos(p.who, t);
+    let cx = lerp(W / 2, hp[0], k), cy = lerp(H / 2, hp[1] + 60, k);
+    cx = clamp(cx, W / 2 / z, W - W / 2 / z); cy = clamp(cy, H / 2 / z, H - H / 2 / z);
+    return { z, cx, cy, p, k };
+  }
+  return { z: 1, cx: W / 2, cy: H / 2, p: null };
+}
+const toScreen = (c, x, y) => [(x - c.cx) * c.z + W / 2, (y - c.cy) * c.z + H / 2];
+
+// ---------- text helpers ----------
+function wrap(text, font, maxW) {
+  ctx.font = font; const words = text.split(' '), lines = []; let cur = '';
+  for (const w of words) { const s = cur ? cur + ' ' + w : w; if (ctx.measureText(s).width > maxW && cur) { lines.push(cur); cur = w; } else cur = s; }
+  if (cur) lines.push(cur); return lines;
+}
+function rrect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+function strokeText(s, x, y, fill, stroke, lw) {
+  ctx.lineJoin = 'round'; ctx.miterLimit = 2;
+  if (lw) { ctx.lineWidth = lw; ctx.strokeStyle = stroke; ctx.strokeText(s, x, y); }
+  ctx.fillStyle = fill; ctx.fillText(s, x, y);
+}
+
+// ---------- style 1: Drama TV (classic subtitles + letterbox) ----------
+function drawDrama(t) {
+  const bar = 150 * out(seg(t, 0, 0.8));
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bar); ctx.fillRect(0, H - bar, W, bar);
+  const ta = Math.min(seg(t, 0.2, 0.9), 1 - seg(t, 3.0, 3.6));
+  if (ta > 0) {
+    ctx.globalAlpha = ta; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '800 40px Poppins'; ctx.fillStyle = '#fff'; ctx.letterSpacing = '8px'; ctx.fillText('HUMAIRA & AIMI', W / 2, 62);
+    ctx.font = '600 24px Poppins'; ctx.letterSpacing = '4px'; ctx.fillStyle = '#ffd98a'; ctx.fillText('EPISOD: OMBOK MARI DOH', W / 2, 108);
+    ctx.letterSpacing = '0px'; ctx.globalAlpha = 1;
+  }
+  const L = lineAt(t); if (!L) return;
+  const [a, b, who, text] = L, wh = WHO[who];
+  const al = Math.min(seg(t, a, a + 0.15), 1 - seg(t, b - 0.12, b));
+  ctx.globalAlpha = al; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  const lines = wrap(text, '600 50px Poppins', 900);
+  const base = H - 210 - (lines.length - 1) * 64;
+  ctx.font = '800 30px Poppins'; ctx.letterSpacing = '3px';
+  strokeText(wh.name, W / 2, base - 62, wh.col, 'rgba(0,0,0,0.85)', 7);
+  ctx.letterSpacing = '0px'; ctx.font = '600 50px Poppins';
+  lines.forEach((ln, i) => strokeText(ln, W / 2, base + i * 64, '#fff', 'rgba(0,0,0,0.9)', 9));
+  ctx.globalAlpha = 1;
+}
+
+// ---------- style 2: Komik (speech bubbles + punch-ins) ----------
+function drawKomik(t, cam) {
+  const L = lineAt(t);
+  if (L) {
+    const [a, b, who, text] = L, wh = WHO[who];
+    const pop = clamp(spring(t, a, 2.4, 0.55), 0, 1.25), gone = 1 - out(seg(t, b - 0.16, b));
+    const s = pop * gone; if (s <= 0.01) return;
+    const n = Math.floor((t - a - 0.06) * 75); const shown = text.slice(0, clamp(n, 0, text.length));
+    const font = '700 52px Fredoka', lines = wrap(text, font, 700);
+    ctx.font = font; const tw = Math.max(...lines.map(l => ctx.measureText(l).width));
+    const bw = tw + 76, bh = lines.length * 64 + 56;
+    const hs = toScreen(cam, ...headPos(who, t));
+    const bx = clamp(hs[0] - bw / 2, 40, W - 40 - bw), by = clamp(hs[1] - 250 - bh, 170, H - bh - 200);
+    const tip = [hs[0], Math.min(hs[1] - 150, by + bh + 120)];
+    const ox = clamp(tip[0], bx + 60, bx + bw - 60);
+    ctx.save(); ctx.translate(ox, by + bh); ctx.scale(s, s); ctx.translate(-ox, -(by + bh));
+    ctx.shadowColor = 'rgba(0,0,0,0.25)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10;
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#1d1d1f'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 44);
+    ctx.moveTo(ox - 34, by + bh - 2); ctx.lineTo(tip[0], tip[1]); ctx.lineTo(ox + 30, by + bh - 2);
+    ctx.fill(); ctx.shadowColor = 'transparent'; ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.fillRect(ox - 30, by + bh - 9, 58, 14); // hide outline where the tail joins
+    // name tab
+    ctx.font = '700 30px Fredoka'; const nw = ctx.measureText(wh.name).width + 40;
+    rrect(bx + 34, by - 26, nw, 50, 25); ctx.fillStyle = wh.col; ctx.fill(); ctx.lineWidth = 5; ctx.stroke();
+    ctx.fillStyle = '#1d1d1f'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(wh.name, bx + 54, by);
+    // typewriter text (lines laid out from the full text so nothing reflows)
+    ctx.font = font; ctx.fillStyle = '#1d1d1f'; let left = shown.length;
+    lines.forEach((ln, i) => { const part = ln.slice(0, Math.max(0, left)); left -= ln.length + 1; ctx.fillText(part, bx + 38, by + 56 + i * 64); });
+    ctx.restore();
+  }
+  if (cam.p && cam.p.kind === 'drama' && cam.k > 0.2) dramaStamp(t, cam);
+}
+function dramaStamp(t, cam) {
+  const k = clamp(spring(t, cam.p.a + (cam.p.a > 30 ? 0.15 : 0.5), 2.2, 0.6), 0, 1.2) * (1 - seg(t, cam.p.b, cam.p.b + 0.3));
+  if (k <= 0) return;
+  const label = cam.p.a < 20 ? 'MOD SERIUS: AKTIF' : 'KEPUTUSAN: SERI';
+  ctx.save(); ctx.translate(W / 2, STYLE === 'komik' ? 1560 : 330); ctx.rotate(-0.06); ctx.scale(k, k);
+  ctx.font = '700 66px Fredoka'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(label).width + 70;
+  rrect(-w / 2, -58, w, 116, 22); ctx.fillStyle = '#e8364f'; ctx.fill(); ctx.lineWidth = 7; ctx.strokeStyle = '#fff'; ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.fillText(label, 0, 4);
+  ctx.restore();
+}
+
+// ---------- style 3: TikTok Pop (word chunks, karaoke highlight, name tags) ----------
+const TAGS = [
+  { a: 0.3, b: 2.3, who: 'A', sub: 'sepupu · ratu TikTok pantai' },
+  { a: 2.3, b: 4.3, who: 'H', sub: '1 tahun 9 bulan · pakar renung ombak' },
+];
+function drawTikTok(t, cam) {
+  for (const g of TAGS) {
+    if (t < g.a || t > g.b) continue;
+    const k = clamp(spring(t, g.a, 2.0, 0.7), 0, 1.1) * (1 - out(seg(t, g.b - 0.25, g.b)));
+    const hs = toScreen(cam, ...headPos(g.who, t)), wh = WHO[g.who];
+    ctx.save(); ctx.translate(hs[0], hs[1] - 230); ctx.scale(k, k);
+    ctx.font = '700 46px Fredoka'; const w1 = ctx.measureText(wh.name).width;
+    ctx.font = '600 26px Fredoka'; const w2 = ctx.measureText(g.sub).width;
+    const w = Math.max(w1, w2) + 60, x = clamp(-w / 2, -hs[0] + 30, W - hs[0] - 30 - w);
+    rrect(x, -60, w, 120, 26); ctx.fillStyle = 'rgba(20,20,24,0.82)'; ctx.fill();
+    rrect(x, -60, 14, 120, 7); ctx.fillStyle = wh.col; ctx.fill();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = '700 46px Fredoka'; ctx.fillStyle = wh.col; ctx.fillText(wh.name, x + 34, -22);
+    ctx.font = '600 26px Fredoka'; ctx.fillStyle = '#fff'; ctx.fillText(g.sub, x + 34, 28);
+    ctx.restore();
+  }
+  const L = lineAt(t);
+  if (L) {
+    const [a, b, who, text] = L, wh = WHO[who], words = text.split(' ');
+    const chunks = []; for (let i = 0; i < words.length; i += 3) chunks.push(words.slice(i, i + 3));
+    const dur = (b - a) / chunks.length, ci = clamp(Math.floor((t - a) / dur), 0, chunks.length - 1);
+    const ca = a + ci * dur, ch = chunks[ci];
+    const k = clamp(spring(t, ca, 3.0, 0.6), 0, 1.2), wi = clamp(Math.floor((t - ca) / (dur / ch.length)), 0, ch.length - 1);
+    ctx.save(); ctx.translate(W / 2, 1440); ctx.scale(k, k);
+    ctx.font = '700 88px Fredoka'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    const tw = ch.reduce((s, w, i) => s + ctx.measureText(w + (i < ch.length - 1 ? ' ' : '')).width, 0);
+    const sc = Math.min(1, 960 / tw); ctx.scale(sc, sc);
+    let x = -tw / 2;
+    ch.forEach((w, i) => {
+      const s = w + (i < ch.length - 1 ? ' ' : '');
+      ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+      strokeText(w, x, 0, i === wi ? wh.col : '#fff', '#111', 16);
+      ctx.shadowColor = 'transparent';
+      x += ctx.measureText(s).width;
+    });
+    ctx.restore();
+    // speaker pill
+    ctx.font = '700 32px Fredoka'; const nw = ctx.measureText(wh.name).width + 44;
+    rrect(W / 2 - nw / 2, 1300, nw, 54, 27); ctx.fillStyle = wh.col; ctx.fill();
+    ctx.fillStyle = '#111'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(wh.name, W / 2, 1328);
+  }
+  if (cam.p && cam.p.kind === 'drama' && cam.k > 0.2) dramaStamp(t, cam);
+}
+
+window.seek = async (t) => {
+  const i = Math.min(NFR, Math.floor(t * FPS + 1e-6) + 1);
+  const img = await frameImg(i);
+  const cam = camera(t);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.cx, -cam.cy);
+  ctx.drawImage(img, 0, 0, W, H); ctx.restore();
+  if (cam.p && cam.p.kind === 'drama' && STYLE !== 'drama') { // dramatic vignette
+    const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.2, W / 2, H / 2, H * 0.7);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${0.55 * cam.k})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  if (STYLE === 'drama') drawDrama(t); else if (STYLE === 'komik') drawKomik(t, cam); else drawTikTok(t, cam);
+};
+(async () => {
+  await Promise.all(['700 50px Fredoka', '600 30px Fredoka', '600 50px Poppins', '800 40px Poppins'].map(f => document.fonts.load(f)));
+  await document.fonts.ready; await window.seek(0); window.ready = true;
+})();
+</script>
+</body>
+</html>

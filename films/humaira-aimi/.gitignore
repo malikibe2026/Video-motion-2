@@ -1,0 +1,7 @@
+assets/source.mp4
+assets/audio.wav
+frames_src/
+frames/
+probe/
+out/
+*.log
