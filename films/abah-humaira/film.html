@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>Abah & Humaira</title>
+<style>
+  @font-face { font-family: 'CG'; src: url('assets/CG-500-italic.ttf'); font-style: italic; font-weight: 500; }
+  @font-face { font-family: 'CG'; src: url('assets/CG-600-normal.ttf'); font-style: normal; font-weight: 600; }
+  html, body { margin: 0; background: #111; }
+  #stage { display: block; width: 1080px; height: 1920px; }
+  #hud { position: fixed; left: 8px; top: 8px; color: #fff; font: 14px monospace; }
+</style>
+</head>
+<body>
+<canvas id="stage" width="1080" height="1920"></canvas>
+<div id="hud"></div>
+<script src="core.js"></script>
+<script src="chars.js"></script>
+<script src="scenes1.js"></script>
+<script src="scenes2.js"></script>
+<script>
+const T = 55;
+// scene table: [start, end, fn, revealOrigin] — scenes overlap by the watercolour reveal
+const SCENES = [
+  [0.0, 8.45, S1, null],
+  [8.0, 13.55, S2, [860, 260]],
+  [13.1, 21.35, S3, [900, 380]],
+  [20.9, 28.35, S4, [880, 360]],
+  [27.9, 34.95, S5, [760, 1060]],
+  [34.5, 39.45, S6, [560, 760]],
+  [39.0, T, S7, [540, 1160]],
+];
+const XF = 0.9; // reveal duration
+const main = document.getElementById('stage').getContext('2d');
+let layer = null, mask = null;
+
+function reveal(fnB, uB, origin, k, seedId) {
+  withCtx(layer, () => { SID = 0; fnB(uB); });
+  withCtx(mask, () => {
+    const maxR = Math.max(...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - origin[0], y - origin[1]))) * 1.32;
+    const r = maxR * io(k);
+    const pts = [];
+    for (let i = 0; i < 120; i++) {
+      const a = Math.PI * 2 * i / 120;
+      const n = 0.10 * noise1(a * 4 + seedId * 13, seedId) + 0.05 * noise1(a * 11 + k * 3, seedId + 9);
+      pts.push([origin[0] + Math.cos(a) * r * (1 + n), origin[1] + Math.sin(a) * r * (1 + n)]);
+    }
+    ctx.filter = 'blur(22px)'; ctx.fillStyle = '#fff'; smoothPath(pts); ctx.fill(); ctx.filter = 'none';
+  });
+  const lc = layer.getContext('2d');
+  lc.save(); lc.globalCompositeOperation = 'destination-in'; lc.drawImage(mask, 0, 0); lc.restore();
+  ctx.drawImage(layer, 0, 0);
+}
+
+window.seek = async (t) => {
+  ctx = main; ctx.setTransform(1, 0, 0, 1, 0, 0);
+  BOIL = Math.floor(t * 8);
+  // base scene = the latest one already fully revealed
+  let base = 0;
+  for (let i = 0; i < SCENES.length; i++) if (t >= SCENES[i][0] + (i ? XF : 0) - 1e-9) base = i;
+  SID = 0; SCENES[base][2](t - SCENES[base][0]);
+  const nx = base + 1;
+  if (nx < SCENES.length && t >= SCENES[nx][0]) {
+    const k = (t - SCENES[nx][0]) / XF;
+    reveal(SCENES[nx][2], t - SCENES[nx][0], SCENES[nx][3], k, nx);
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  paperPass(0.5);
+  vignette(0.32);
+  overlays(t);
+  // end fade
+  const f = seg(t, 54.0, 55.0);
+  if (f > 0) { ctx.fillStyle = `rgba(18,9,6,${f})`; ctx.fillRect(0, 0, W, H); }
+  // opening fade-in from warm paper
+  const f0 = 1 - seg(t, 0, 0.6);
+  if (f0 > 0) { ctx.fillStyle = `rgba(246,226,204,${f0})`; ctx.fillRect(0, 0, W, H); }
+  document.getElementById('hud').textContent = location.search.includes('hud') ? t.toFixed(2) : '';
+};
+
+// ---------- preview controls (Space play/pause, arrows step, R replay) ----------
+let playing = false, t0 = 0, tNow = 0;
+function loop(ts) { if (!playing) return; tNow = Math.min(T, (ts - t0) / 1000); window.seek(tNow); if (tNow < T) requestAnimationFrame(loop); else playing = false; }
+addEventListener('keydown', e => {
+  if (e.code === 'Space') { playing = !playing; if (playing) { t0 = performance.now() - tNow * 1000; requestAnimationFrame(loop); } }
+  if (e.code === 'ArrowRight') { tNow = Math.min(T, tNow + 1 / 30); window.seek(tNow); }
+  if (e.code === 'ArrowLeft') { tNow = Math.max(0, tNow - 1 / 30); window.seek(tNow); }
+  if (e.code === 'KeyR') { tNow = 0; playing = true; t0 = performance.now(); requestAnimationFrame(loop); }
+});
+
+(async () => {
+  buildTextures(); layer = mkCanvas(); mask = mkCanvas();
+  await document.fonts.load("500 italic 64px CG"); await document.fonts.load("600 70px CG"); await document.fonts.ready;
+  await window.seek(0);
+  window.ready = true;
+})();
+</script>
+</body>
+</html>
