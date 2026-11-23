@@ -45,7 +45,9 @@ async function shot(pg, t, file, type = 'png') {
     for (let i = a; i < e; i++) {
       for (let j = 0; j < SUB; j++) {
         const t = Math.min(T - 1e-3, Math.max(0, i / FPS + offs[j]));
-        await shot(pg, t, path.join(dir, `s_${String(i * SUB + j).padStart(6, '0')}.jpg`), 'jpeg');
+        const file = path.join(dir, `s_${String(i * SUB + j).padStart(6, '0')}.jpg`);
+        if (fs.existsSync(file) && fs.statSync(file).size > 10000) continue; // resume: keep finished frames
+        await shot(pg, t, file, 'jpeg');
       }
       if ((i - a) % 60 === 0) console.log(`chunk ${k}: frame ${i - a}/${e - a}`);
     }
