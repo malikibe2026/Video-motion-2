@@ -1,0 +1,13 @@
+#!/bin/bash
+# Run an video-explainer script in its own venv (numpy).
+# Override the location with VIDEO_EXPLAINER_VENV.
+V="${VIDEO_EXPLAINER_VENV:-$HOME/.cache/video-explainer/venv}"
+if [ ! -x "$V/bin/python" ]; then
+  if command -v uv >/dev/null; then uv venv -q -p 3.12 "$V" || exit 1
+  else python3 -m venv "$V" || exit 1; fi
+fi
+if ! "$V/bin/python" -c "import numpy" 2>/dev/null; then
+  if command -v uv >/dev/null; then uv pip install -q -p "$V/bin/python" numpy || exit 1
+  else "$V/bin/pip" install -q --disable-pip-version-check numpy || exit 1; fi
+fi
+exec "$V/bin/python" -B "$@"
